@@ -1,0 +1,30 @@
+library-management-system/
+│
+├── app.py                    # Main Flask app
+├── config.py                 # DB config, secret keys
+│
+├── templates/                # HTML files
+│   ├── base.html
+│   ├── home.html
+│   ├── add_book.html
+│   ├── issue_book.html
+│   └── ...
+│
+├── static/                   # CSS, JS, Images
+│   ├── css/
+│   └── js/
+│
+├── models/                   # Data models
+│   └── database.py           # DB schema and connection
+│
+├── routes/                   # Flask route handlers
+│   ├── books.py
+│   ├── members.py
+│   ├── transactions.py
+│   └── auth.py
+│
+├── utils/                    # Helper functions
+│   └── validators.py
+│
+├── requirements.txt          # Python dependencies
+└── README.md                 # Project info
