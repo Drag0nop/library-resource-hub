@@ -1,0 +1,57 @@
+<!-- templates/transactions/issue.html -->
+{% extends "base.html" %}
+
+{% block title %}Issue Book - Library Management System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-book-open"></i> Issue Book</h3>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="book_id" class="form-label">Select Book *</label>
+                        <select class="form-control" id="book_id" name="book_id" required>
+                            <option value="">Choose a book...</option>
+                            {% for book in books %}
+                            <option value="{{ book.id }}">
+                                {{ book.title }} - {{ book.author }} ({{ book.available_copies }} available)
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="member_id" class="form-label">Select Member *</label>
+                        <select class="form-control" id="member_id" name="member_id" required>
+                            <option value="">Choose a member...</option>
+                            {% for member in members %}
+                            <option value="{{ member.id }}">
+                                {{ member.name }} - {{ member.email }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="due_date" class="form-label">Due Date *</label>
+                        <input type="date" class="form-control" id="due_date" name="due_date" value="{{ default_due_date }}" required>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('transactions.list_transactions') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Transactions
+                        </a>
+                        <button type="submit" class="btn btn-info">
+                            <i class="fas fa-book-open"></i> Issue Book
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

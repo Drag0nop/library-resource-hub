@@ -1,30 +1,54 @@
 library-management-system/
 │
-├── app.py                    # Main Flask app
-├── config.py                 # DB config, secret keys
+├── app.py                           # Main Flask application entry point
+├── config.py                        # Configuration settings and environment variables
+├── requirements.txt                 # Python dependencies
+├── README.md                        # Project documentation and setup instructions
+├── library.db                       # SQLite database file (auto-generated)
 │
-├── templates/                # HTML files
-│   ├── base.html
-│   ├── home.html
-│   ├── add_book.html
-│   ├── issue_book.html
-│   └── ...
+├── models/                          # Data models and database operations
+│   ├── __init__.py                  # Makes it a Python package
+│   └── database.py                  # Database schema, connections, and initialization
 │
-├── static/                   # CSS, JS, Images
-│   ├── css/
-│   └── js/
+├── routes/                          # Flask route handlers (blueprints)
+│   ├── __init__.py                  # Makes it a Python package
+│   ├── auth.py                      # Authentication routes (login, logout, register)
+│   ├── books.py                     # Book management routes (CRUD operations)
+│   ├── members.py                   # Member management routes (CRUD operations)
+│   └── transactions.py              # Transaction routes (issue, return, overdue)
 │
-├── models/                   # Data models
-│   └── database.py           # DB schema and connection
+├── utils/                           # Helper functions and utilities
+│   ├── __init__.py                  # Makes it a Python package
+│   └── validators.py                # Validation functions and fine calculations
 │
-├── routes/                   # Flask route handlers
-│   ├── books.py
-│   ├── members.py
-│   ├── transactions.py
-│   └── auth.py
+├── templates/                       # Jinja2 HTML templates
+│   ├── base.html                    # Base template with navigation and layout
+│   ├── home.html                    # Dashboard/home page
+│   ├── login.html                   # Login form
+│   ├── register.html                # User registration form
+│   │
+│   ├── books/                       # Book-related templates
+│   │   ├── list.html                # Display all books
+│   │   ├── add.html                 # Add new book form
+│   │   └── edit.html                # Edit existing book form
+│   │
+│   ├── members/                     # Member-related templates
+│   │   ├── list.html                # Display all members
+│   │   ├── add.html                 # Add new member form
+│   │   └── edit.html                # Edit existing member form
+│   │
+│   └── transactions/                # Transaction-related templates
+│       ├── list.html                # Display all transactions
+│       ├── issue.html               # Issue book form
+│       └── overdue.html             # Overdue books report
 │
-├── utils/                    # Helper functions
-│   └── validators.py
-│
-├── requirements.txt          # Python dependencies
-└── README.md                 # Project info
+└── static/                          # Static files (CSS, JavaScript, Images)
+    ├── css/                         # Stylesheets
+    │   └── style.css                # Custom CSS styles
+    │
+    ├── js/                          # JavaScript files
+    │   └── script.js                # Custom JavaScript functionality
+    │
+    └── images/                      # Image assets (optional)
+        ├── logo.png                 # Library logo (optional)
+        └── favicon.ico               # Website favicon (optional)
