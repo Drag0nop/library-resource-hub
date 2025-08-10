@@ -1,54 +1,14 @@
-library-management-system/
-│
-├── app.py                           # Main Flask application entry point
-├── config.py                        # Configuration settings and environment variables
-├── requirements.txt                 # Python dependencies
-├── README.md                        # Project documentation and setup instructions
-├── library.db                       # SQLite database file (auto-generated)
-│
-├── models/                          # Data models and database operations
-│   ├── __init__.py                  # Makes it a Python package
-│   └── database.py                  # Database schema, connections, and initialization
-│
-├── routes/                          # Flask route handlers (blueprints)
-│   ├── __init__.py                  # Makes it a Python package
-│   ├── auth.py                      # Authentication routes (login, logout, register)
-│   ├── books.py                     # Book management routes (CRUD operations)
-│   ├── members.py                   # Member management routes (CRUD operations)
-│   └── transactions.py              # Transaction routes (issue, return, overdue)
-│
-├── utils/                           # Helper functions and utilities
-│   ├── __init__.py                  # Makes it a Python package
-│   └── validators.py                # Validation functions and fine calculations
-│
-├── templates/                       # Jinja2 HTML templates
-│   ├── base.html                    # Base template with navigation and layout
-│   ├── home.html                    # Dashboard/home page
-│   ├── login.html                   # Login form
-│   ├── register.html                # User registration form
-│   │
-│   ├── books/                       # Book-related templates
-│   │   ├── list.html                # Display all books
-│   │   ├── add.html                 # Add new book form
-│   │   └── edit.html                # Edit existing book form
-│   │
-│   ├── members/                     # Member-related templates
-│   │   ├── list.html                # Display all members
-│   │   ├── add.html                 # Add new member form
-│   │   └── edit.html                # Edit existing member form
-│   │
-│   └── transactions/                # Transaction-related templates
-│       ├── list.html                # Display all transactions
-│       ├── issue.html               # Issue book form
-│       └── overdue.html             # Overdue books report
-│
-└── static/                          # Static files (CSS, JavaScript, Images)
-    ├── css/                         # Stylesheets
-    │   └── style.css                # Custom CSS styles
-    │
-    ├── js/                          # JavaScript files
-    │   └── script.js                # Custom JavaScript functionality
-    │
-    └── images/                      # Image assets (optional)
-        ├── logo.png                 # Library logo (optional)
-        └── favicon.ico               # Website favicon (optional)
+library_management_system/
+├── backend/
+│   ├── app.py (Flask main application)
+│   ├── database.py (Database connection and initialization)
+│   ├── models.py (Database models)
+│   └── requirements.txt
+├── frontend/
+│   ├── index.html (Main dashboard)
+│   ├── css/
+│   │   └── style.css
+│   └── js/
+│       └── script.js
+└── database/
+    └── schema.sql (Database schema)
