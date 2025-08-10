@@ -12,7 +12,7 @@ CORS(app)
 DB_CONFIG = {
     'host': 'localhost',
     'user': 'root',
-    'password': 'your_password',  # Change this
+    'password': 'kn@g@rk0ti',  # Change this
     'database': 'library_db',
     'port': 3306
 }
