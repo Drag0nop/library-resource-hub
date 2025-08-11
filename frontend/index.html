@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Management System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="form-container" id="loginForm">
+            <h2>Login to Library</h2>
+            <form id="loginFormElement">
+                <div class="form-group">
+                    <label for="loginUsername">Username:</label>
+                    <input type="text" id="loginUsername" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password:</label>
+                    <input type="password" id="loginPassword" name="password" required>
+                </div>
+                <button type="submit">Login</button>
+                <p>Don't have an account? <a href="#" id="showRegister">Register here</a></p>
+            </form>
+        </div>
+
+        <div class="form-container hidden" id="registerForm">
+            <h2>Register</h2>
+            <form id="registerFormElement">
+                <div class="form-group">
+                    <label for="registerUsername">Username:</label>
+                    <input type="text" id="registerUsername" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Password:</label>
+                    <input type="password" id="registerPassword" name="password" required>
+                </div>
+                <div class="form-group">
+                    <label for="role">Role:</label>
+                    <select id="role" name="role">
+                        <option value="member">Member</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <button type="submit">Register</button>
+                <p>Already have an account? <a href="#" id="showLogin">Login here</a></p>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+</body>
+</html>
