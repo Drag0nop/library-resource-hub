@@ -1,17 +1,34 @@
-library_management/
-├── backend/
-│   ├── app.py (Flask main application)
-│   ├── models.py (Database models)
-│   ├── routes.py (API routes)
-│   ├── database.py (Database connection)
-│   └── requirements.txt
-├── static/
-│   ├── index.html (Login page)
-│   ├── dashboard.html (Main dashboard)
-│   ├── favicon.ico
+library_management_system/
+│
+├── app.py                # Main Flask app
+├── requirements.txt      # Dependencies
+├── config.py             # DB configuration
+│
+├── static/               # CSS, JS, Images
 │   ├── css/
 │   │   └── style.css
-│   └── js/
-│       └── script.js
-└── database/
-    └── schema.sql
+│   ├── js/
+│   │   └── script.js
+│   └── images/
+│       └── logo.png
+│
+├── templates/            # HTML pages
+│   ├── login.html
+│   ├── signup.html
+│   ├── home.html
+│   ├── add_book.html
+│   ├── delete_book.html
+│   ├── issue_book.html
+│   ├── user_account.html
+│
+├── models/               # Python classes for DB
+│   ├── user_model.py
+│   ├── book_model.py
+│   └── issue_model.py
+│
+├── utils/                # Helpers
+│   ├── auth.py
+│   └── db.py
+│
+└── database/             
+    └── schema.sql        # MySQL schema
