@@ -2,7 +2,7 @@ from flask import Flask, render_template
 from flask_cors import CORS
 from routes import api
 
-app = Flask(__name__, template_folder='../frontend', static_folder='../frontend')
+app = Flask(__name__, template_folder='../static', static_folder='../static')
 CORS(app)
 
 app.register_blueprint(api, url_prefix='/api')
