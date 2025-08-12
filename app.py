@@ -1,203 +1,420 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
+from flask_mysqldb import MySQL
 from werkzeug.security import generate_password_hash, check_password_hash
-import mysql.connector
-import datetime
-import config
+import MySQLdb.cursors
+import re
+from datetime import datetime, timedelta
+import secrets
+import os
+from functools import wraps
 
 app = Flask(__name__)
-app.secret_key = config.SECRET_KEY
 
-def get_db_connection():
-    return mysql.connector.connect(
-        host=config.MYSQL_HOST,
-        user=config.MYSQL_USER,
-        password=config.MYSQL_PASSWORD,
-        database=config.MYSQL_DB
-    )
+# Configuration
+app.config['SECRET_KEY'] = secrets.token_hex(16)  # Generate a random secret key
+app.config['MYSQL_HOST'] = 'localhost'
+app.config['MYSQL_USER'] = 'root'  # Change to your MySQL username
+app.config['MYSQL_PASSWORD'] = 'kn@g@rk0ti'  # Change to your MySQL password
+app.config['MYSQL_DB'] = 'login_app'
+app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
+# Initialize MySQL
+mysql = MySQL(app)
+
+# Database setup function
+def init_db():
+    """Initialize the database with required tables"""
+    try:
+        cursor = mysql.connection.cursor()
+        
+        # Create users table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                email VARCHAR(100) UNIQUE NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_login TIMESTAMP NULL,
+                is_active BOOLEAN DEFAULT TRUE,
+                remember_token VARCHAR(255) NULL
+            )
+        ''')
+        
+        # Create login_attempts table for security
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS login_attempts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                email VARCHAR(100) NOT NULL,
+                ip_address VARCHAR(45) NOT NULL,
+                attempt_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                success BOOLEAN DEFAULT FALSE
+            )
+        ''')
+        
+        mysql.connection.commit()
+        cursor.close()
+        print("Database tables created successfully!")
+        
+    except Exception as e:
+        print(f"Error creating database tables: {e}")
+
+# Decorator for login required
 def login_required(f):
-    from functools import wraps
     @wraps(f)
-    def decorated(*args, **kwargs):
+    def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
             return redirect(url_for('login'))
         return f(*args, **kwargs)
-    return decorated
+    return decorated_function
 
-@app.route('/')
-def home():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT COUNT(*) as total_books FROM books")
-    total_books = cursor.fetchone()['total_books']
-    cursor.execute("SELECT * FROM books")
-    books = cursor.fetchall()
+# Helper functions
+def validate_email(email):
+    """Validate email format"""
+    pattern = r'^[^\s@]+@[^\s@]+\.[^\s@]+$'
+    return re.match(pattern, email) is not None
+
+def validate_password(password):
+    """Validate password strength"""
+    if len(password) < 6:
+        return False, "Password must be at least 6 characters long"
+    if not re.search(r'[A-Za-z]', password):
+        return False, "Password must contain at least one letter"
+    if not re.search(r'\d', password):
+        return False, "Password must contain at least one number"
+    return True, "Valid password"
+
+def check_login_attempts(email, ip_address):
+    """Check if too many failed login attempts"""
+    cursor = mysql.connection.cursor()
+    
+    # Check attempts in last 15 minutes
+    time_limit = datetime.now() - timedelta(minutes=15)
+    cursor.execute('''
+        SELECT COUNT(*) as attempts FROM login_attempts 
+        WHERE email = %s AND ip_address = %s AND attempt_time > %s AND success = FALSE
+    ''', (email, ip_address, time_limit))
+    
+    result = cursor.fetchone()
     cursor.close()
-    conn.close()
-    return render_template('home.html', total_books=total_books, books=books, username=session.get('username'))
+    
+    return result['attempts'] >= 5  # Max 5 attempts in 15 minutes
+
+def log_login_attempt(email, ip_address, success):
+    """Log login attempt"""
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute('''
+            INSERT INTO login_attempts (email, ip_address, success) 
+            VALUES (%s, %s, %s)
+        ''', (email, ip_address, success))
+        mysql.connection.commit()
+        cursor.close()
+    except Exception as e:
+        print(f"Error logging login attempt: {e}")
+
+# Routes
+@app.route('/')
+def index():
+    """Home page - redirect to login if not authenticated"""
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
-        data = request.form
-        username = data.get('username').strip()
-        password = data.get('password')
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM users WHERE username=%s", (username,))
-        user = cursor.fetchone()
+    """Login page and authentication"""
+    if request.method == 'GET':
+        # If already logged in, redirect to dashboard
+        if 'user_id' in session:
+            return redirect(url_for('dashboard'))
+        return render_template('login.html')
+    
+    elif request.method == 'POST':
+        # Handle AJAX login request
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '')
+        remember_me = data.get('remember', False)
+        
+        # Validation
+        if not email or not password:
+            return jsonify({
+                'success': False,
+                'message': 'Email and password are required'
+            }), 400
+        
+        if not validate_email(email):
+            return jsonify({
+                'success': False,
+                'message': 'Invalid email format'
+            }), 400
+        
+        # Check for too many failed attempts
+        ip_address = request.environ.get('HTTP_X_REAL_IP', request.remote_addr)
+        if check_login_attempts(email, ip_address):
+            return jsonify({
+                'success': False,
+                'message': 'Too many failed login attempts. Please try again later.'
+            }), 429
+        
+        try:
+            cursor = mysql.connection.cursor()
+            cursor.execute('SELECT * FROM users WHERE email = %s AND is_active = TRUE', (email,))
+            user = cursor.fetchone()
+            
+            if user and check_password_hash(user['password_hash'], password):
+                # Successful login
+                session['user_id'] = user['id']
+                session['username'] = user['username']
+                session['email'] = user['email']
+                session.permanent = remember_me
+                
+                # Update last login
+                cursor.execute('UPDATE users SET last_login = NOW() WHERE id = %s', (user['id'],))
+                mysql.connection.commit()
+                
+                # Log successful attempt
+                log_login_attempt(email, ip_address, True)
+                
+                cursor.close()
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'Login successful',
+                    'redirect': url_for('dashboard')
+                })
+            else:
+                # Failed login
+                log_login_attempt(email, ip_address, False)
+                cursor.close()
+                
+                return jsonify({
+                    'success': False,
+                    'message': 'Invalid email or password'
+                }), 401
+                
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': 'Database error occurred'
+            }), 500
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    """User registration"""
+    if request.method == 'GET':
+        return render_template('register.html')
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '')
+        confirm_password = data.get('confirm_password', '')
+        
+        # Validation
+        if not all([username, email, password, confirm_password]):
+            return jsonify({
+                'success': False,
+                'message': 'All fields are required'
+            }), 400
+        
+        if not validate_email(email):
+            return jsonify({
+                'success': False,
+                'message': 'Invalid email format'
+            }), 400
+        
+        if password != confirm_password:
+            return jsonify({
+                'success': False,
+                'message': 'Passwords do not match'
+            }), 400
+        
+        is_valid, message = validate_password(password)
+        if not is_valid:
+            return jsonify({
+                'success': False,
+                'message': message
+            }), 400
+        
+        try:
+            cursor = mysql.connection.cursor()
+            
+            # Check if user already exists
+            cursor.execute('SELECT id FROM users WHERE email = %s OR username = %s', (email, username))
+            existing_user = cursor.fetchone()
+            
+            if existing_user:
+                cursor.close()
+                return jsonify({
+                    'success': False,
+                    'message': 'User with this email or username already exists'
+                }), 409
+            
+            # Create new user
+            password_hash = generate_password_hash(password)
+            cursor.execute('''
+                INSERT INTO users (username, email, password_hash) 
+                VALUES (%s, %s, %s)
+            ''', (username, email, password_hash))
+            
+            mysql.connection.commit()
+            cursor.close()
+            
+            return jsonify({
+                'success': True,
+                'message': 'Registration successful! You can now login.',
+                'redirect': url_for('login')
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': 'Registration failed. Please try again.'
+            }), 500
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    """User dashboard"""
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute('''
+            SELECT username, email, created_at, last_login 
+            FROM users WHERE id = %s
+        ''', (session['user_id'],))
+        user_info = cursor.fetchone()
         cursor.close()
-        conn.close()
-        if user and check_password_hash(user['password_hash'], password):
-            session['user_id'] = user['id']
-            session['username'] = user['username']
-            return redirect(url_for('home'))
-        flash('Invalid username/password', 'error')
-    return render_template('login.html')
+        
+        return render_template('dashboard.html', user=user_info)
+    except Exception as e:
+        flash('Error loading dashboard')
+        return redirect(url_for('login'))
 
 @app.route('/logout')
 def logout():
+    """User logout"""
     session.clear()
+    flash('You have been logged out successfully')
     return redirect(url_for('login'))
 
-@app.route('/signup', methods=['GET', 'POST'])
-def signup():
-    if request.method == 'POST':
-        data = request.form
-        username = data.get('username').strip()
-        email = data.get('email').strip()
-        password = data.get('password')
-
-        if not username or not email or not password:
-            flash('Please fill all fields', 'error')
-            return redirect(url_for('signup'))
-
-        pw_hash = generate_password_hash(password)
-        conn = get_db_connection()
-        cursor = conn.cursor()
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    """Forgot password functionality"""
+    if request.method == 'GET':
+        return render_template('forgot_password.html')
+    
+    elif request.method == 'POST':
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+        
+        if not validate_email(email):
+            return jsonify({
+                'success': False,
+                'message': 'Invalid email format'
+            }), 400
+        
         try:
-            cursor.execute("INSERT INTO users (username, email, password_hash) VALUES (%s,%s,%s)",
-                           (username, email, pw_hash))
-            conn.commit()
-            flash('Signup successful — please log in', 'success')
-            return redirect(url_for('login'))
-        except mysql.connector.IntegrityError:
-            flash('Username or email already exists', 'error')
-            return redirect(url_for('signup'))
-        finally:
+            cursor = mysql.connection.cursor()
+            cursor.execute('SELECT id FROM users WHERE email = %s', (email,))
+            user = cursor.fetchone()
             cursor.close()
-            conn.close()
-    return render_template('signup.html')
+            
+            if user:
+                # In a real application, you would send a password reset email here
+                # For demo purposes, we'll just return a success message
+                return jsonify({
+                    'success': True,
+                    'message': 'If an account with this email exists, a password reset link has been sent.'
+                })
+            else:
+                # Return the same message for security (don't reveal if email exists)
+                return jsonify({
+                    'success': True,
+                    'message': 'If an account with this email exists, a password reset link has been sent.'
+                })
+                
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': 'Error processing request'
+            }), 500
 
-# ---------- API endpoints for frontend AJAX ----------
-
-@app.route('/api/add_book', methods=['POST'])
+@app.route('/profile')
 @login_required
-def api_add_book():
-    data = request.get_json()
-    title = data.get('title', '').strip()
-    author = data.get('author', '').strip()
-    qty = int(data.get('quantity') or 1)
-    if not title or not author:
-        return jsonify({'error': 'Missing fields'}), 400
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO books (title, author, quantity) VALUES (%s,%s,%s)",
-                   (title, author, qty))
-    conn.commit()
-    book_id = cursor.lastrowid
-    cursor.close()
-    conn.close()
-    return jsonify({'success': True, 'book_id': book_id}), 201
+def profile():
+    """User profile page"""
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute('''
+            SELECT username, email, created_at, last_login 
+            FROM users WHERE id = %s
+        ''', (session['user_id'],))
+        user_info = cursor.fetchone()
+        cursor.close()
+        
+        return render_template('profile.html', user=user_info)
+    except Exception as e:
+        flash('Error loading profile')
+        return redirect(url_for('dashboard'))
 
-@app.route('/api/delete_book/<int:book_id>', methods=['DELETE'])
+@app.route('/api/user-stats')
 @login_required
-def api_delete_book(book_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM books WHERE id=%s", (book_id,))
-    conn.commit()
-    affected = cursor.rowcount
-    cursor.close()
-    conn.close()
-    if affected:
-        return jsonify({'success': True})
-    return jsonify({'error': 'Book not found'}), 404
+def user_stats():
+    """API endpoint for user statistics"""
+    try:
+        cursor = mysql.connection.cursor()
+        
+        # Get user info
+        cursor.execute('''
+            SELECT created_at, last_login 
+            FROM users WHERE id = %s
+        ''', (session['user_id'],))
+        user_info = cursor.fetchone()
+        
+        # Get login attempts count
+        cursor.execute('''
+            SELECT COUNT(*) as total_attempts 
+            FROM login_attempts WHERE email = %s
+        ''', (session['email'],))
+        attempts = cursor.fetchone()
+        
+        cursor.close()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'member_since': user_info['created_at'].strftime('%B %Y'),
+                'last_login': user_info['last_login'].strftime('%Y-%m-%d %H:%M:%S') if user_info['last_login'] else 'Never',
+                'total_login_attempts': attempts['total_attempts']
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': 'Error fetching user statistics'
+        }), 500
 
-@app.route('/api/issue_book', methods=['POST'])
-@login_required
-def api_issue_book():
-    data = request.get_json()
-    book_id = int(data.get('book_id'))
-    user_id = session['user_id']
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    # Check quantity
-    cursor.execute("SELECT quantity FROM books WHERE id=%s", (book_id,))
-    row = cursor.fetchone()
-    if not row:
-        cursor.close(); conn.close()
-        return jsonify({'error': 'Book not found'}), 404
-    qty = row[0]
-    if qty <= 0:
-        cursor.close(); conn.close()
-        return jsonify({'error': 'No copies available'}), 400
-    # Issue
-    today = datetime.date.today()
-    cursor.execute("INSERT INTO issued_books (user_id, book_id, issue_date) VALUES (%s,%s,%s)",
-                   (user_id, book_id, today))
-    cursor.execute("UPDATE books SET quantity = quantity - 1 WHERE id=%s", (book_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return jsonify({'success': True}), 201
+# Error handlers
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('404.html'), 404
 
-@app.route('/api/user_issued')
-@login_required
-def api_user_issued():
-    user_id = session['user_id']
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("""
-        SELECT i.id as issue_id, b.id as book_id, b.title, b.author, i.issue_date, i.return_date
-        FROM issued_books i
-        JOIN books b ON i.book_id = b.id
-        WHERE i.user_id=%s
-        ORDER BY i.issue_date DESC
-    """, (user_id,))
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return jsonify({'issued': rows})
+@app.errorhandler(500)
+def internal_error(error):
+    return render_template('500.html'), 500
 
-# convenience endpoint to list available books (quantity > 0)
-@app.route('/api/available_books')
-@login_required
-def api_available_books():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT id, title, author, quantity FROM books WHERE quantity > 0 ORDER BY title")
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return jsonify({'books': rows})
-
-# ---------- Templates routes for pages that use JS ----------
-
-@app.route('/add_book')
-@login_required
-def add_book_page():
-    return render_template('add_book.html')
-
-@app.route('/issue_book')
-@login_required
-def issue_book_page():
-    return render_template('issue_book.html')
-
-@app.route('/user_account')
-@login_required
-def user_account_page():
-    return render_template('user_account.html')
+# Database initialization
+@app.before_request
+def create_tables():
+    init_db()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Set session lifetime
+    app.permanent_session_lifetime = timedelta(days=7)
+    
+    # Run the application
+    app.run(debug=True, host='0.0.0.0', port=5000)
