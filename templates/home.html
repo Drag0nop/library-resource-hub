@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block content %}
+  <h1>Welcome to the Library</h1>
+  <p class="muted">This simple LMS lets you add, issue, and remove books.</p>
+
+  <div class="stats">
+    <div class="card">
+      <h3>Total Books</h3>
+      <p class="big">{{ total_books }}</p>
+    </div>
+  </div>
+
+  <h2>All Books</h2>
+  <table class="table" id="books-table">
+    <thead>
+      <tr><th>Title</th><th>Author</th><th>Qty</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for b in books %}
+      <tr data-book-id="{{ b.id }}">
+        <td>{{ b.title }}</td>
+        <td>{{ b.author }}</td>
+        <td>{{ b.quantity }}</td>
+        <td>
+          <button class="delete-book-btn" data-id="{{ b.id }}">Delete</button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
