@@ -10,15 +10,16 @@ passwordToggle.addEventListener('click', function() {
 
 // Form validation and submission
 const loginForm = document.getElementById('loginForm');
-const emailInput = document.getElementById('email');
-const emailError = document.getElementById('emailError');
+const usernameInput = document.getElementById('username');
+const usernameError = document.getElementById('usernameError');
 const passwordError = document.getElementById('passwordError');
 const successMessage = document.getElementById('successMessage');
 
-// Email validation
-function validateEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+// Username validation
+function validateUsername(username) {
+    // Username should be at least 3 characters and contain only letters, numbers, underscore, or hyphen
+    const usernameRegex = /^[a-zA-Z0-9_-]{3,}$/;
+    return usernameRegex.test(username);
 }
 
 // Password validation
@@ -38,11 +39,11 @@ function hideError(element) {
 }
 
 // Real-time validation
-emailInput.addEventListener('input', function() {
-    if (this.value && !validateEmail(this.value)) {
-        showError(emailError, 'Please enter a valid email address');
+usernameInput.addEventListener('input', function() {
+    if (this.value && !validateUsername(this.value)) {
+        showError(usernameError, 'Username must be at least 3 characters and contain only letters, numbers, underscore, or hyphen');
     } else {
-        hideError(emailError);
+        hideError(usernameError);
     }
 });
 
@@ -58,20 +59,20 @@ passwordInput.addEventListener('input', function() {
 loginForm.addEventListener('submit', function(e) {
     e.preventDefault();
     
-    const email = emailInput.value.trim();
+    const username = usernameInput.value.trim();
     const password = passwordInput.value;
     let isValid = true;
 
     // Reset errors
-    hideError(emailError);
+    hideError(usernameError);
     hideError(passwordError);
 
-    // Validate email
-    if (!email) {
-        showError(emailError, 'Email is required');
+    // Validate username
+    if (!username) {
+        showError(usernameError, 'Username is required');
         isValid = false;
-    } else if (!validateEmail(email)) {
-        showError(emailError, 'Please enter a valid email address');
+    } else if (!validateUsername(username)) {
+        showError(usernameError, 'Username must be at least 3 characters and contain only letters, numbers, underscore, or hyphen');
         isValid = false;
     }
 
@@ -106,16 +107,7 @@ loginForm.addEventListener('submit', function(e) {
             }, 2000);
         }, 1500);
     }
-});
-
-// Social login buttons
-document.querySelector('.social-btn.google').addEventListener('click', function() {
-    alert('Google login would be implemented here');
-});
-
-document.querySelector('.social-btn.apple').addEventListener('click', function() {
-    alert('Apple login would be implemented here');
-});
+})
 
 // Forgot password link
 document.querySelector('.forgot-password').addEventListener('click', function(e) {
@@ -139,24 +131,4 @@ inputs.forEach(input => {
     input.addEventListener('blur', function() {
         this.parentElement.style.transform = 'scale(1)';
     });
-});
-// In your login form submission
-fetch('/login', {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-        email: email,
-        password: password,
-        remember: remember
-    })
-})
-.then(response => response.json())
-.then(data => {
-    if (data.success) {
-        window.location.href = data.redirect;
-    } else {
-        // Show error message
-    }
 });
