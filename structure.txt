@@ -1,34 +1,17 @@
-library_management_system/
-│
-├── app.py                # Main Flask app
-├── requirements.txt      # Dependencies
-├── config.py             # DB configuration
-│
-├── static/               # CSS, JS, Images
-│   ├── css/
-│   │   └── style.css
-│   ├── js/
-│   │   └── script.js
-│   └── images/
-│       └── logo.png
-│
-├── templates/            # HTML pages
-│   ├── login.html
-│   ├── signup.html
-│   ├── home.html
-│   ├── add_book.html
-│   ├── delete_book.html
-│   ├── issue_book.html
-│   ├── user_account.html
-│
-├── models/               # Python classes for DB
-│   ├── user_model.py
-│   ├── book_model.py
-│   └── issue_model.py
-│
-├── utils/                # Helpers
-│   ├── auth.py
-│   └── db.py
-│
-└── database/             
-    └── schema.sql        # MySQL schema
+your_project/
+├── app.py (main Flask file)
+├── templates/
+│   ├── base.html
+│   ├── login.html (your existing file)
+│   ├── index.html
+│   ├── books.html
+│   ├── my_books.html
+│   ├── 404.html
+│   └── 500.html
+└── static/
+    ├── css/
+    │   ├── login.css (your existing file)
+    │   └── style.css (new main styles)
+    └── js/
+        ├── login.js (updated for Flask)
+        └── main.js (new main functionality)
