@@ -17,7 +17,6 @@ const successMessage = document.getElementById('successMessage');
 
 // Username validation
 function validateUsername(username) {
-    // Username should be at least 3 characters and contain only letters, numbers, underscore, or hyphen
     const usernameRegex = /^[a-zA-Z0-9_-]{3,}$/;
     return usernameRegex.test(username);
 }
@@ -56,14 +55,13 @@ passwordInput.addEventListener('input', function() {
 });
 
 // Form submission
-loginForm.addEventListener('submit', function(e) {
+loginForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const username = usernameInput.value.trim();
     const password = passwordInput.value;
     let isValid = true;
 
-    // Reset errors
     hideError(usernameError);
     hideError(passwordError);
 
@@ -86,7 +84,6 @@ loginForm.addEventListener('submit', function(e) {
     }
 
     if (isValid) {
-        // Simulate login process
         const loginBtn = document.querySelector('.login-btn');
         const originalText = loginBtn.textContent;
         
@@ -94,20 +91,37 @@ loginForm.addEventListener('submit', function(e) {
         loginBtn.style.opacity = '0.7';
         loginBtn.disabled = true;
 
-        setTimeout(() => {
-            successMessage.classList.add('show');
+        try {
+            const response = await fetch("/api/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    username: username,
+                    password: password,
+                    remember: document.getElementById('remember')?.checked || false
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Optional: show success animation before redirect
+                successMessage.classList.add('show');
+                setTimeout(() => {
+                    window.location.href = data.redirect; // Go to /dashboard
+                }, 800);
+            } else {
+                alert(data.message);
+            }
+        } catch (error) {
+            alert("An error occurred while logging in");
+        } finally {
             loginBtn.textContent = originalText;
             loginBtn.style.opacity = '1';
             loginBtn.disabled = false;
-
-            // In a real application, you would redirect here
-            setTimeout(() => {
-                alert('Login successful! In a real app, you would be redirected now.');
-                successMessage.classList.remove('show');
-            }, 2000);
-        }, 1500);
+        }
     }
-})
+});
 
 // Forgot password link
 document.querySelector('.forgot-password').addEventListener('click', function(e) {
