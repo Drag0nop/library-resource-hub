@@ -4,333 +4,863 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Library Management System</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #4c51bf;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 25px;
+            padding: 5px;
+        }
+
+        .nav-tab {
+            background: transparent;
+            border: none;
+            padding: 12px 25px;
+            cursor: pointer;
+            border-radius: 20px;
+            color: white;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin: 0 5px;
+        }
+
+        .nav-tab.active {
+            background: rgba(255, 255, 255, 0.9);
+            color: #4c51bf;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-tab:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .tab-content {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4c51bf;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #4c51bf;
+            box-shadow: 0 0 0 3px rgba(76, 81, 191, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #f56565, #e53e3e);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #48bb78, #38a169);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .table td {
+            padding: 15px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #c6f6d5;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .alert-error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #4c51bf;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 45px 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
+            font-size: 16px;
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            margin: 50px auto;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 15px;
+            position: relative;
+        }
+
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+            
+            .nav-tabs {
+                flex-wrap: wrap;
+            }
+            
+            .table-container {
+                overflow-x: auto;
+            }
+        }
+    </style>
 </head>
 <body>
-    <!-- Navigation Bar -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-logo">
-                <h2>📚 LibraryPro</h2>
-            </div>
-            <ul class="nav-menu">
-                <li class="nav-item">
-                    <a href="#" class="nav-link active" data-page="home">
-                        <span class="nav-icon">🏠</span>
-                        Home
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link" data-page="add">
-                        <span class="nav-icon">➕</span>
-                        Add Books
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link" data-page="delete">
-                        <span class="nav-icon">🗑️</span>
-                        Delete Books
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link" data-page="issue">
-                        <span class="nav-icon">📖</span>
-                        Issue Books
-                    </a>
-                </li>
-            </ul>
-            <div class="user-profile">
-                <div class="user-avatar" id="userAvatar">
-                    <span class="user-initial">U</span>
-                </div>
-                <div class="user-dropdown" id="userDropdown">
-                    <div class="user-info">
-                        <h3 id="userName">User Name</h3>
-                        <p id="userRole">Library Admin</p>
-                    </div>
-                    <div class="user-stats">
-                        <div class="stat-item">
-                            <span class="stat-number" id="booksAdded">0</span>
-                            <span class="stat-label">Books Added</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number" id="booksDeleted">0</span>
-                            <span class="stat-label">Books Deleted</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number" id="booksIssued">0</span>
-                            <span class="stat-label">Books Issued</span>
-                        </div>
-                    </div>
-                    <button class="logout-btn" onclick="logout()">Logout</button>
-                </div>
-            </div>
+    <div class="container">
+        <div class="header">
+            <h1>📚 Library Management System</h1>
+            <p>Manage your books, members, and borrowings efficiently</p>
         </div>
-    </nav>
 
-    <!-- Main Content Container -->
-    <main class="main-content">
-        
-        <!-- Home Page -->
-        <section class="page active" id="homePage">
-            <div class="hero-section">
-                <h1 class="hero-title">Welcome to LibraryPro</h1>
-                <p class="hero-subtitle">Your Complete Library Management Solution</p>
-            </div>
-            
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon">📚</div>
-                    <div class="stat-content">
-                        <h3 class="stat-title">Total Books</h3>
-                        <p class="stat-number" id="totalBooks">0</p>
-                        <p class="stat-description">Books in collection</p>
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('dashboard')">Dashboard</button>
+            <button class="nav-tab" onclick="showTab('books')">Books</button>
+            <button class="nav-tab" onclick="showTab('members')">Members</button>
+            <button class="nav-tab" onclick="showTab('borrowings')">Borrowings</button>
+        </div>
+
+        <div class="tab-content">
+            <!-- Dashboard Tab -->
+            <div id="dashboard" class="tab-pane active">
+                <h2>Dashboard Overview</h2>
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalBooks">0</div>
+                        <div class="stat-label">Total Books</div>
                     </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">📖</div>
-                    <div class="stat-content">
-                        <h3 class="stat-title">Issued Books</h3>
-                        <p class="stat-number" id="totalIssued">0</p>
-                        <p class="stat-description">Currently with members</p>
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalMembers">0</div>
+                        <div class="stat-label">Active Members</div>
                     </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">📋</div>
-                    <div class="stat-content">
-                        <h3 class="stat-title">Available Books</h3>
-                        <p class="stat-number" id="availableBooks">0</p>
-                        <p class="stat-description">Ready to issue</p>
+                    <div class="stat-card">
+                        <div class="stat-number" id="borrowedBooks">0</div>
+                        <div class="stat-label">Books Borrowed</div>
                     </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">👥</div>
-                    <div class="stat-content">
-                        <h3 class="stat-title">Active Members</h3>
-                        <p class="stat-number" id="activeMembers">25</p>
-                        <p class="stat-description">Registered users</p>
+                    <div class="stat-card">
+                        <div class="stat-number" id="overdueBooks">0</div>
+                        <div class="stat-label">Overdue Books</div>
                     </div>
                 </div>
             </div>
 
-            <div class="about-section">
-                <h2>About Library Management System</h2>
-                <div class="about-content">
-                    <div class="about-text">
-                        <p>LibraryPro is a comprehensive digital solution designed to streamline library operations and enhance the user experience for both librarians and patrons.</p>
-                        
-                        <h3>What This Project Does:</h3>
-                        <ul class="feature-list">
-                            <li>✅ <strong>Book Management:</strong> Add, update, and delete books from the library inventory</li>
-                            <li>✅ <strong>Issue Tracking:</strong> Track book loans, due dates, and returns</li>
-                            <li>✅ <strong>User Management:</strong> Manage member accounts and borrowing history</li>
-                            <li>✅ <strong>Real-time Statistics:</strong> Monitor library performance with live data</li>
-                            <li>✅ <strong>Search & Filter:</strong> Quickly find books by title, author, or category</li>
-                            <li>✅ <strong>Digital Records:</strong> Maintain comprehensive digital records</li>
-                        </ul>
-                        
-                        <h3>Key Benefits:</h3>
-                        <ul class="benefit-list">
-                            <li>🚀 Improved efficiency in library operations</li>
-                            <li>📊 Better inventory management and tracking</li>
-                            <li>⏰ Reduced manual work and human errors</li>
-                            <li>📱 Modern, user-friendly interface</li>
-                            <li>🔄 Real-time updates and synchronization</li>
-                        </ul>
-                    </div>
-                    <div class="about-image">
-                        <div class="library-illustration">
-                            <div class="bookshelf">
-                                <div class="book book1"></div>
-                                <div class="book book2"></div>
-                                <div class="book book3"></div>
-                                <div class="book book4"></div>
-                                <div class="book book5"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Add Books Page -->
-        <section class="page" id="addPage">
-            <div class="page-header">
-                <h1>Add New Books</h1>
-                <p>Add books to the library collection</p>
-            </div>
-            
-            <div class="form-container">
-                <form id="addBookForm" class="book-form">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="bookTitle">Book Title *</label>
-                            <input type="text" id="bookTitle" name="title" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="bookAuthor">Author *</label>
-                            <input type="text" id="bookAuthor" name="author" required>
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="bookISBN">ISBN</label>
-                            <input type="text" id="bookISBN" name="isbn">
-                        </div>
-                        <div class="form-group">
-                            <label for="bookCategory">Category</label>
-                            <select id="bookCategory" name="category">
-                                <option value="Fiction">Fiction</option>
-                                <option value="Non-Fiction">Non-Fiction</option>
-                                <option value="Science">Science</option>
-                                <option value="History">History</option>
-                                <option value="Biography">Biography</option>
-                                <option value="Technology">Technology</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="bookPublisher">Publisher</label>
-                            <input type="text" id="bookPublisher" name="publisher">
-                        </div>
-                        <div class="form-group">
-                            <label for="bookYear">Publication Year</label>
-                            <input type="number" id="bookYear" name="year" min="1900" max="2024">
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="bookDescription">Description</label>
-                        <textarea id="bookDescription" name="description" rows="3"></textarea>
-                    </div>
-                    
-                    <button type="submit" class="submit-btn">
-                        <span class="btn-icon">➕</span>
-                        Add Book
-                    </button>
-                </form>
-            </div>
-            
-            <div class="recent-additions">
-                <h2>Recently Added Books</h2>
-                <div id="recentBooks" class="book-list">
-                    <!-- Recent books will be populated by JavaScript -->
-                </div>
-            </div>
-        </section>
-
-        <!-- Delete Books Page -->
-        <section class="page" id="deletePage">
-            <div class="page-header">
-                <h1>Delete Books</h1>
-                <p>Remove books from the library collection</p>
-            </div>
-            
-            <div class="search-container">
-                <div class="search-box">
-                    <input type="text" id="deleteSearchInput" placeholder="Search books by title, author, or ISBN...">
-                    <button class="search-btn">🔍</button>
-                </div>
-                <div class="filter-options">
-                    <select id="deleteFilterCategory">
-                        <option value="">All Categories</option>
-                        <option value="Fiction">Fiction</option>
-                        <option value="Non-Fiction">Non-Fiction</option>
-                        <option value="Science">Science</option>
-                        <option value="History">History</option>
-                        <option value="Biography">Biography</option>
-                        <option value="Technology">Technology</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div id="deleteBookList" class="book-grid">
-                <!-- Books will be populated by JavaScript -->
-            </div>
-        </section>
-
-        <!-- Issue Books Page -->
-        <section class="page" id="issuePage">
-            <div class="page-header">
-                <h1>Issue Books</h1>
-                <p>Manage book loans and returns</p>
-            </div>
-            
-            <div class="issue-container">
-                <div class="issue-form-section">
-                    <h2>Issue a Book</h2>
-                    <form id="issueBookForm" class="issue-form">
-                        <div class="form-group">
-                            <label for="memberName">Member Name *</label>
-                            <input type="text" id="memberName" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="memberEmail">Member Email *</label>
-                            <input type="email" id="memberEmail" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="bookSelect">Select Book *</label>
-                            <select id="bookSelect" required>
-                                <option value="">Choose a book...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="issueDate">Issue Date</label>
-                            <input type="date" id="issueDate" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="dueDate">Due Date</label>
-                            <input type="date" id="dueDate" required>
-                        </div>
-                        <button type="submit" class="submit-btn">
-                            <span class="btn-icon">📖</span>
-                            Issue Book
-                        </button>
-                    </form>
-                </div>
+            <!-- Books Tab -->
+            <div id="books" class="tab-pane">
+                <h2>Books Management</h2>
+                <div id="bookAlert"></div>
                 
-                <div class="issued-books-section">
-                    <h2>Currently Issued Books</h2>
-                    <div id="issuedBooksList" class="issued-books-list">
-                        <!-- Issued books will be populated by JavaScript -->
+                <form id="bookForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Title *</label>
+                            <input type="text" class="form-control" name="title" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Author *</label>
+                            <input type="text" class="form-control" name="author" required>
+                        </div>
                     </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>ISBN</label>
+                            <input type="text" class="form-control" name="isbn">
+                        </div>
+                        <div class="form-group">
+                            <label>Genre</label>
+                            <input type="text" class="form-control" name="genre">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Publication Year</label>
+                            <input type="number" class="form-control" name="publication_year">
+                        </div>
+                        <div class="form-group">
+                            <label>Total Copies</label>
+                            <input type="number" class="form-control" name="total_copies" value="1" min="1">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">Add Book</button>
+                    <button type="button" class="btn" onclick="clearForm('bookForm')">Clear</button>
+                </form>
+
+                <div class="search-box">
+                    <input type="text" class="search-input" id="bookSearch" placeholder="Search books...">
+                    <span class="search-icon">🔍</span>
+                </div>
+
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Author</th>
+                                <th>ISBN</th>
+                                <th>Genre</th>
+                                <th>Year</th>
+                                <th>Available/Total</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="booksTable">
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        </section>
 
-    </main>
+            <!-- Members Tab -->
+            <div id="members" class="tab-pane">
+                <h2>Members Management</h2>
+                <div id="memberAlert"></div>
+                
+                <form id="memberForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Name *</label>
+                            <input type="text" class="form-control" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email *</label>
+                            <input type="email" class="form-control" name="email" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Phone</label>
+                            <input type="tel" class="form-control" name="phone">
+                        </div>
+                        <div class="form-group">
+                            <label>Address</label>
+                            <input type="text" class="form-control" name="address">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">Add Member</button>
+                    <button type="button" class="btn" onclick="clearForm('memberForm')">Clear</button>
+                </form>
 
-    <!-- Success/Error Messages -->
-    <div class="toast" id="toast">
-        <span class="toast-message"></span>
-        <button class="toast-close">&times;</button>
-    </div>
+                <div class="search-box">
+                    <input type="text" class="search-input" id="memberSearch" placeholder="Search members...">
+                    <span class="search-icon">🔍</span>
+                </div>
 
-    <!-- Delete Confirmation Modal -->
-    <div class="modal" id="deleteModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Confirm Deletion</h3>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete this book?</p>
-                <div class="book-details" id="deleteBookDetails">
-                    <!-- Book details will be populated -->
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Membership Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="membersTable">
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn-secondary" onclick="closeDeleteModal()">Cancel</button>
-                <button class="btn-danger" onclick="confirmDelete()">Delete Book</button>
+
+            <!-- Borrowings Tab -->
+            <div id="borrowings" class="tab-pane">
+                <h2>Borrowings Management</h2>
+                <div id="borrowingAlert"></div>
+                
+                <form id="borrowingForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Book *</label>
+                            <select class="form-control" name="book_id" required id="bookSelect">
+                                <option value="">Select a book</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Member *</label>
+                            <select class="form-control" name="member_id" required id="memberSelect">
+                                <option value="">Select a member</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">Borrow Book</button>
+                    <button type="button" class="btn" onclick="clearForm('borrowingForm')">Clear</button>
+                </form>
+
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Book</th>
+                                <th>Member</th>
+                                <th>Borrow Date</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Fine</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="borrowingsTable">
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='library-script.js') }}"></script>
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        let currentBooks = [];
+        let currentMembers = [];
+        let currentBorrowings = [];
+
+        // Tab management
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-pane').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+
+            // Load data for the selected tab
+            if (tabName === 'dashboard') {
+                loadDashboard();
+            } else if (tabName === 'books') {
+                loadBooks();
+            } else if (tabName === 'members') {
+                loadMembers();
+            } else if (tabName === 'borrowings') {
+                loadBorrowings();
+                loadBookOptions();
+                loadMemberOptions();
+            }
+        }
+
+        // Utility functions
+        function showAlert(containerId, message, type = 'success') {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        function clearForm(formId) {
+            document.getElementById(formId).reset();
+        }
+
+        // API calls
+        async function apiCall(url, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${url}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'An error occurred');
+                }
+
+                return await response.json();
+            } catch (error) {
+                console.error('API Error:', error);
+                throw error;
+            }
+        }
+
+        // Dashboard functions
+        async function loadDashboard() {
+            try {
+                const [books, members, borrowings] = await Promise.all([
+                    apiCall('/books'),
+                    apiCall('/members'),
+                    apiCall('/borrowings')
+                ]);
+
+                const totalBooks = books.reduce((sum, book) => sum + book.total_copies, 0);
+                const activeMembers = members.filter(member => member.status === 'active').length;
+                const borrowedBooks = borrowings.filter(b => b.status === 'borrowed').length;
+                const overdueBooks = borrowings.filter(b => {
+                    if (b.status !== 'borrowed') return false;
+                    const dueDate = new Date(b.due_date);
+                    return dueDate < new Date();
+                }).length;
+
+                document.getElementById('totalBooks').textContent = totalBooks;
+                document.getElementById('totalMembers').textContent = activeMembers;
+                document.getElementById('borrowedBooks').textContent = borrowedBooks;
+                document.getElementById('overdueBooks').textContent = overdueBooks;
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        // Books functions
+        async function loadBooks() {
+            try {
+                currentBooks = await apiCall('/books');
+                displayBooks(currentBooks);
+            } catch (error) {
+                showAlert('bookAlert', 'Error loading books: ' + error.message, 'error');
+            }
+        }
+
+        function displayBooks(books) {
+            const tbody = document.getElementById('booksTable');
+            tbody.innerHTML = books.map(book => `
+                <tr>
+                    <td>${book.title}</td>
+                    <td>${book.author}</td>
+                    <td>${book.isbn || '-'}</td>
+                    <td>${book.genre || '-'}</td>
+                    <td>${book.publication_year || '-'}</td>
+                    <td>${book.copies_available}/${book.total_copies}</td>
+                    <td>
+                        <button class="btn btn-danger" onclick="deleteBook(${book.id})">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function addBook(formData) {
+            try {
+                await apiCall('/books', {
+                    method: 'POST',
+                    body: JSON.stringify(formData)
+                });
+                showAlert('bookAlert', 'Book added successfully!');
+                clearForm('bookForm');
+                loadBooks();
+            } catch (error) {
+                showAlert('bookAlert', 'Error adding book: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteBook(bookId) {
+            if (!confirm('Are you sure you want to delete this book?')) return;
+            
+            try {
+                await apiCall(`/books/${bookId}`, { method: 'DELETE' });
+                showAlert('bookAlert', 'Book deleted successfully!');
+                loadBooks();
+            } catch (error) {
+                showAlert('bookAlert', 'Error deleting book: ' + error.message, 'error');
+            }
+        }
+
+        // Members functions
+        async function loadMembers() {
+            try {
+                currentMembers = await apiCall('/members');
+                displayMembers(currentMembers);
+            } catch (error) {
+                showAlert('memberAlert', 'Error loading members: ' + error.message, 'error');
+            }
+        }
+
+        function displayMembers(members) {
+            const tbody = document.getElementById('membersTable');
+            tbody.innerHTML = members.map(member => `
+                <tr>
+                    <td>${member.name}</td>
+                    <td>${member.email}</td>
+                    <td>${member.phone || '-'}</td>
+                    <td>${new Date(member.membership_date).toLocaleDateString()}</td>
+                    <td>
+                        <span style="color: ${member.status === 'active' ? '#22543d' : '#742a2a'};">
+                            ${member.status}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function addMember(formData) {
+            try {
+                await apiCall('/members', {
+                    method: 'POST',
+                    body: JSON.stringify(formData)
+                });
+                showAlert('memberAlert', 'Member added successfully!');
+                clearForm('memberForm');
+                loadMembers();
+            } catch (error) {
+                showAlert('memberAlert', 'Error adding member: ' + error.message, 'error');
+            }
+        }
+
+        // Borrowings functions
+        async function loadBorrowings() {
+            try {
+                currentBorrowings = await apiCall('/borrowings');
+                displayBorrowings(currentBorrowings);
+            } catch (error) {
+                showAlert('borrowingAlert', 'Error loading borrowings: ' + error.message, 'error');
+            }
+        }
+
+        function displayBorrowings(borrowings) {
+            const tbody = document.getElementById('borrowingsTable');
+            tbody.innerHTML = borrowings.map(borrowing => {
+                const dueDate = new Date(borrowing.due_date);
+                const isOverdue = borrowing.status === 'borrowed' && dueDate < new Date();
+                
+                return `
+                    <tr>
+                        <td>${borrowing.book_title}</td>
+                        <td>${borrowing.member_name}</td>
+                        <td>${new Date(borrowing.borrow_date).toLocaleDateString()}</td>
+                        <td style="color: ${isOverdue ? '#e53e3e' : 'inherit'};">
+                            ${dueDate.toLocaleDateString()}
+                        </td>
+                        <td>
+                            <span style="color: ${getStatusColor(borrowing.status, isOverdue)};">
+                                ${isOverdue ? 'OVERDUE' : borrowing.status.toUpperCase()}
+                            </span>
+                        </td>
+                        <td>${borrowing.fine_amount}</td>
+                        <td>
+                            ${borrowing.status === 'borrowed' ? 
+                                `<button class="btn btn-success" onclick="returnBook(${borrowing.id})">Return</button>` 
+                                : '-'
+                            }
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getStatusColor(status, isOverdue) {
+            if (isOverdue) return '#e53e3e';
+            switch (status) {
+                case 'borrowed': return '#d69e2e';
+                case 'returned': return '#22543d';
+                default: return '#4c51bf';
+            }
+        }
+
+        async function loadBookOptions() {
+            try {
+                const books = await apiCall('/books');
+                const select = document.getElementById('bookSelect');
+                select.innerHTML = '<option value="">Select a book</option>' +
+                    books.filter(book => book.copies_available > 0)
+                         .map(book => `<option value="${book.id}">${book.title} by ${book.author}</option>`)
+                         .join('');
+            } catch (error) {
+                console.error('Error loading book options:', error);
+            }
+        }
+
+        async function loadMemberOptions() {
+            try {
+                const members = await apiCall('/members');
+                const select = document.getElementById('memberSelect');
+                select.innerHTML = '<option value="">Select a member</option>' +
+                    members.filter(member => member.status === 'active')
+                           .map(member => `<option value="${member.id}">${member.name}</option>`)
+                           .join('');
+            } catch (error) {
+                console.error('Error loading member options:', error);
+            }
+        }
+
+        async function borrowBook(formData) {
+            try {
+                await apiCall('/borrow', {
+                    method: 'POST',
+                    body: JSON.stringify(formData)
+                });
+                showAlert('borrowingAlert', 'Book borrowed successfully!');
+                clearForm('borrowingForm');
+                loadBorrowings();
+                loadBookOptions(); // Refresh available books
+            } catch (error) {
+                showAlert('borrowingAlert', 'Error borrowing book: ' + error.message, 'error');
+            }
+        }
+
+        async function returnBook(borrowingId) {
+            if (!confirm('Confirm book return?')) return;
+            
+            try {
+                const result = await apiCall(`/return/${borrowingId}`, { method: 'PUT' });
+                let message = 'Book returned successfully!';
+                if (result.fine > 0) {
+                    message += ` Fine: ${result.fine}`;
+                }
+                showAlert('borrowingAlert', message);
+                loadBorrowings();
+                loadBookOptions(); // Refresh available books
+            } catch (error) {
+                showAlert('borrowingAlert', 'Error returning book: ' + error.message, 'error');
+            }
+        }
+
+        // Search functionality
+        function setupSearch() {
+            document.getElementById('bookSearch').addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const filtered = currentBooks.filter(book => 
+                    book.title.toLowerCase().includes(query) ||
+                    book.author.toLowerCase().includes(query) ||
+                    (book.genre && book.genre.toLowerCase().includes(query))
+                );
+                displayBooks(filtered);
+            });
+
+            document.getElementById('memberSearch').addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const filtered = currentMembers.filter(member => 
+                    member.name.toLowerCase().includes(query) ||
+                    member.email.toLowerCase().includes(query)
+                );
+                displayMembers(filtered);
+            });
+        }
+
+        // Form submissions
+        document.getElementById('bookForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            // Convert numeric fields
+            if (data.publication_year) data.publication_year = parseInt(data.publication_year);
+            if (data.total_copies) {
+                data.total_copies = parseInt(data.total_copies);
+                data.copies_available = data.total_copies; // Initially all copies are available
+            }
+            addBook(data);
+        });
+
+        document.getElementById('memberForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            addMember(data);
+        });
+
+        document.getElementById('borrowingForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            // Convert to integers
+            data.book_id = parseInt(data.book_id);
+            data.member_id = parseInt(data.member_id);
+            borrowBook(data);
+        });
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDashboard();
+            setupSearch();
+        });
+    </script>
 </body>
 </html>

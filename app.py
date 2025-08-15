@@ -1,346 +1,310 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
-from flask_mysqldb import MySQL
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Flask, request, jsonify, render_template_string
+from flask_cors import CORS
+import mysql.connector
 from datetime import datetime, timedelta
-import MySQLdb.cursors
 import os
-import re
 
-# Create Flask app
 app = Flask(__name__)
+CORS(app)
 
-# Configuration
-app.config['MYSQL_HOST'] = os.environ.get('MYSQL_HOST', 'localhost')
-app.config['MYSQL_USER'] = os.environ.get('MYSQL_USER', 'root')
-app.config['MYSQL_PASSWORD'] = os.environ.get('MYSQL_PASSWORD', 'kn@g@rk0ti')
-app.config['MYSQL_DB'] = os.environ.get('MYSQL_DB', 'library_management')
-app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here-change-in-production')
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
+# Database configuration
+DB_CONFIG = {
+    'host': 'localhost',
+    'user': 'root',
+    'password': 'kn@g@rk0ti',  # Change this
+    'database': 'library_db'
+}
 
-# Initialize MySQL
-mysql = MySQL(app)
-
-# Helper function to check if user is logged in
-def is_logged_in():
-    return 'loggedin' in session
-
-# Routes
-@app.route('/')
-def home():
-    if is_logged_in():
-        return redirect(url_for('dashboard'))
-    return redirect(url_for('login'))
-
-@app.route('/login')
-def login():
-    return render_template('login.html')
-
-@app.route('/dashboard')
-def dashboard():
-    if not is_logged_in():
-        return redirect(url_for('login'))
-    return render_template('index.html')
-
-@app.route('/api/login', methods=['POST'])
-def api_login():
+def get_db_connection():
     try:
-        data = request.get_json()
-        username = data.get('username')
-        password = data.get('password')
-        remember = data.get('remember', False)
+        connection = mysql.connector.connect(**DB_CONFIG)
+        return connection
+    except mysql.connector.Error as err:
+        print(f"Error: {err}")
+        return None
+
+# Initialize database tables
+def init_database():
+    connection = get_db_connection()
+    if connection:
+        cursor = connection.cursor()
         
-        if not username or not password:
-            return jsonify({'success': False, 'message': 'Username and password required'})
+        # Create books table
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS books (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            author VARCHAR(255) NOT NULL,
+            isbn VARCHAR(20) UNIQUE,
+            genre VARCHAR(100),
+            publication_year INT,
+            copies_available INT DEFAULT 1,
+            total_copies INT DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        ''')
         
-        cursor = mysql.connection.cursor()
-        cursor.execute('SELECT * FROM users WHERE username = %s OR email = %s', (username, username))
-        user = cursor.fetchone()
+        # Create members table
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS members (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            phone VARCHAR(20),
+            address TEXT,
+            membership_date DATE DEFAULT (CURDATE()),
+            status ENUM('active', 'inactive') DEFAULT 'active'
+        )
+        ''')
+        
+        # Create borrowings table
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS borrowings (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            book_id INT,
+            member_id INT,
+            borrow_date DATE DEFAULT (CURDATE()),
+            due_date DATE,
+            return_date DATE NULL,
+            status ENUM('borrowed', 'returned', 'overdue') DEFAULT 'borrowed',
+            fine_amount DECIMAL(10,2) DEFAULT 0.00,
+            FOREIGN KEY (book_id) REFERENCES books(id),
+            FOREIGN KEY (member_id) REFERENCES members(id)
+        )
+        ''')
+        
+        connection.commit()
         cursor.close()
-        
-        if user and check_password_hash(user['password'], password):
-            session.permanent = remember
-            session['loggedin'] = True
-            session['user_id'] = user['id']
-            session['username'] = user['username']
-            session['email'] = user['email']
-            session['role'] = user['role']
-            
-            return jsonify({
-                'success': True, 
-                'message': 'Login successful',
-                'redirect': url_for('dashboard')
-            })
-        else:
-            return jsonify({'success': False, 'message': 'Invalid username or password'})
-            
-    except Exception as e:
-        return jsonify({'success': False, 'message': 'An error occurred during login'})
+        connection.close()
+        print("Database initialized successfully!")
 
-@app.route('/api/logout', methods=['POST'])
-def api_logout():
-    session.clear()
-    return jsonify({'success': True, 'message': 'Logged out successfully'})
+# API Routes
 
-# Book Management APIs
+@app.route('/')
+def index():
+    return render_template_string(open('frontend/index.html').read())
+
+# Books endpoints
 @app.route('/api/books', methods=['GET'])
 def get_books():
-    if not is_logged_in():
-        return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'error': 'Database connection failed'}), 500
     
-    try:
-        cursor = mysql.connection.cursor()
-        cursor.execute('''
-            SELECT b.*, 
-                   CASE WHEN ib.id IS NOT NULL THEN 'issued' ELSE 'available' END as status
-            FROM books b 
-            LEFT JOIN issued_books ib ON b.id = ib.book_id AND ib.returned_date IS NULL
-            ORDER BY b.created_at DESC
-        ''')
-        books = cursor.fetchall()
-        cursor.close()
-        
-        return jsonify({'success': True, 'books': books})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+    cursor = connection.cursor(dictionary=True)
+    cursor.execute('SELECT * FROM books ORDER BY title')
+    books = cursor.fetchall()
+    cursor.close()
+    connection.close()
+    
+    return jsonify(books)
 
 @app.route('/api/books', methods=['POST'])
 def add_book():
-    if not is_logged_in():
-        return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+    data = request.get_json()
     
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    cursor = connection.cursor()
     try:
-        data = request.get_json()
-        
-        # Validate required fields
-        required_fields = ['title', 'author']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'success': False, 'message': f'{field.title()} is required'})
-        
-        cursor = mysql.connection.cursor()
         cursor.execute('''
-            INSERT INTO books (title, author, isbn, category, publisher, publication_year, description, added_by)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO books (title, author, isbn, genre, publication_year, copies_available, total_copies)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
         ''', (
-            data['title'],
-            data['author'],
-            data.get('isbn', ''),
-            data.get('category', 'Other'),
-            data.get('publisher', ''),
-            data.get('year', None),
-            data.get('description', ''),
-            session['user_id']
+            data['title'], data['author'], data.get('isbn'),
+            data.get('genre'), data.get('publication_year'),
+            data.get('copies_available', 1), data.get('total_copies', 1)
         ))
-        mysql.connection.commit()
+        connection.commit()
         book_id = cursor.lastrowid
         cursor.close()
+        connection.close()
         
-        # Update user stats
-        update_user_stats(session['user_id'], 'books_added', 1)
+        return jsonify({'id': book_id, 'message': 'Book added successfully'}), 201
+    except mysql.connector.Error as err:
+        return jsonify({'error': str(err)}), 400
+
+@app.route('/api/books/<int:book_id>', methods=['PUT'])
+def update_book(book_id):
+    data = request.get_json()
+    
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    cursor = connection.cursor()
+    try:
+        cursor.execute('''
+        UPDATE books SET title=%s, author=%s, isbn=%s, genre=%s, 
+        publication_year=%s, copies_available=%s, total_copies=%s
+        WHERE id=%s
+        ''', (
+            data['title'], data['author'], data.get('isbn'),
+            data.get('genre'), data.get('publication_year'),
+            data.get('copies_available'), data.get('total_copies'), book_id
+        ))
+        connection.commit()
+        cursor.close()
+        connection.close()
         
-        return jsonify({'success': True, 'message': 'Book added successfully', 'book_id': book_id})
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'message': 'Book updated successfully'})
+    except mysql.connector.Error as err:
+        return jsonify({'error': str(err)}), 400
 
 @app.route('/api/books/<int:book_id>', methods=['DELETE'])
 def delete_book(book_id):
-    if not is_logged_in():
-        return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'error': 'Database connection failed'}), 500
     
-    try:
-        cursor = mysql.connection.cursor()
-        
-        # Check if book is currently issued
-        cursor.execute('SELECT * FROM issued_books WHERE book_id = %s AND returned_date IS NULL', (book_id,))
-        if cursor.fetchone():
-            cursor.close()
-            return jsonify({'success': False, 'message': 'Cannot delete book that is currently issued'})
-        
-        # Delete the book
-        cursor.execute('DELETE FROM books WHERE id = %s', (book_id,))
-        mysql.connection.commit()
-        cursor.close()
-        
-        # Update user stats
-        update_user_stats(session['user_id'], 'books_deleted', 1)
-        
-        return jsonify({'success': True, 'message': 'Book deleted successfully'})
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+    cursor = connection.cursor()
+    cursor.execute('DELETE FROM books WHERE id = %s', (book_id,))
+    connection.commit()
+    cursor.close()
+    connection.close()
+    
+    return jsonify({'message': 'Book deleted successfully'})
 
-@app.route('/api/books/issue', methods=['POST'])
-def issue_book():
-    if not is_logged_in():
-        return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+# Members endpoints
+@app.route('/api/members', methods=['GET'])
+def get_members():
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'error': 'Database connection failed'}), 500
     
+    cursor = connection.cursor(dictionary=True)
+    cursor.execute('SELECT * FROM members ORDER BY name')
+    members = cursor.fetchall()
+    cursor.close()
+    connection.close()
+    
+    return jsonify(members)
+
+@app.route('/api/members', methods=['POST'])
+def add_member():
+    data = request.get_json()
+    
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    cursor = connection.cursor()
     try:
-        data = request.get_json()
-        
-        # Validate required fields
-        required_fields = ['member_name', 'member_email', 'book_id', 'issue_date', 'due_date']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'success': False, 'message': f'{field.replace("_", " ").title()} is required'})
-        
-        cursor = mysql.connection.cursor()
-        
-        # Check if book is available
-        cursor.execute('SELECT * FROM issued_books WHERE book_id = %s AND returned_date IS NULL', (data['book_id'],))
-        if cursor.fetchone():
-            cursor.close()
-            return jsonify({'success': False, 'message': 'Book is already issued'})
-        
-        # Issue the book
         cursor.execute('''
-            INSERT INTO issued_books (book_id, member_name, member_email, issue_date, due_date, issued_by)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        ''', (
-            data['book_id'],
-            data['member_name'],
-            data['member_email'],
-            data['issue_date'],
-            data['due_date'],
-            session['user_id']
-        ))
-        mysql.connection.commit()
+        INSERT INTO members (name, email, phone, address)
+        VALUES (%s, %s, %s, %s)
+        ''', (data['name'], data['email'], data.get('phone'), data.get('address')))
+        connection.commit()
+        member_id = cursor.lastrowid
         cursor.close()
+        connection.close()
         
-        # Update user stats
-        update_user_stats(session['user_id'], 'books_issued', 1)
-        
-        return jsonify({'success': True, 'message': 'Book issued successfully'})
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'id': member_id, 'message': 'Member added successfully'}), 201
+    except mysql.connector.Error as err:
+        return jsonify({'error': str(err)}), 400
 
-@app.route('/api/books/return/<int:issue_id>', methods=['POST'])
-def return_book(issue_id):
-    if not is_logged_in():
-        return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+# Borrowings endpoints
+@app.route('/api/borrowings', methods=['GET'])
+def get_borrowings():
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'error': 'Database connection failed'}), 500
     
-    try:
-        cursor = mysql.connection.cursor()
-        cursor.execute('''
-            UPDATE issued_books 
-            SET returned_date = %s 
-            WHERE id = %s AND returned_date IS NULL
-        ''', (datetime.now().date(), issue_id))
-        mysql.connection.commit()
-        cursor.close()
-        
-        return jsonify({'success': True, 'message': 'Book returned successfully'})
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/issued-books', methods=['GET'])
-def get_issued_books():
-    if not is_logged_in():
-        return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+    cursor = connection.cursor(dictionary=True)
+    cursor.execute('''
+    SELECT b.*, bk.title as book_title, bk.author, m.name as member_name
+    FROM borrowings b
+    JOIN books bk ON b.book_id = bk.id
+    JOIN members m ON b.member_id = m.id
+    ORDER BY b.borrow_date DESC
+    ''')
+    borrowings = cursor.fetchall()
+    cursor.close()
+    connection.close()
     
-    try:
-        cursor = mysql.connection.cursor()
-        cursor.execute('''
-            SELECT ib.*, b.title, b.author
-            FROM issued_books ib
-            JOIN books b ON ib.book_id = b.id
-            WHERE ib.returned_date IS NULL
-            ORDER BY ib.issue_date DESC
-        ''')
-        issued_books = cursor.fetchall()
-        cursor.close()
-        
-        return jsonify({'success': True, 'issued_books': issued_books})
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+    return jsonify(borrowings)
 
-@app.route('/api/stats', methods=['GET'])
-def get_stats():
-    if not is_logged_in():
-        return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+@app.route('/api/borrow', methods=['POST'])
+def borrow_book():
+    data = request.get_json()
+    book_id = data['book_id']
+    member_id = data['member_id']
     
-    try:
-        cursor = mysql.connection.cursor()
-        
-        # Get total books
-        cursor.execute('SELECT COUNT(*) as count FROM books')
-        total_books = cursor.fetchone()['count']
-        
-        # Get issued books
-        cursor.execute('SELECT COUNT(*) as count FROM issued_books WHERE returned_date IS NULL')
-        issued_books = cursor.fetchone()['count']
-        
-        # Get available books
-        available_books = total_books - issued_books
-        
-        # Get active members (unique members who have issued books)
-        cursor.execute('SELECT COUNT(DISTINCT member_email) as count FROM issued_books')
-        active_members = cursor.fetchone()['count']
-        
-        # Get user-specific stats
-        cursor.execute('SELECT * FROM users WHERE id = %s', (session['user_id'],))
-        user_stats = cursor.fetchone()
-        
-        cursor.close()
-        
-        return jsonify({
-            'success': True,
-            'stats': {
-                'total_books': total_books,
-                'issued_books': issued_books,
-                'available_books': available_books,
-                'active_members': active_members,
-                'user_stats': {
-                    'books_added': user_stats.get('books_added', 0),
-                    'books_deleted': user_stats.get('books_deleted', 0),
-                    'books_issued': user_stats.get('books_issued', 0)
-                }
-            }
-        })
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/user-info', methods=['GET'])
-def get_user_info():
-    if not is_logged_in():
-        return jsonify({'success': False, 'message': 'Not authenticated'}), 401
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'error': 'Database connection failed'}), 500
     
-    return jsonify({
-        'success': True,
-        'user': {
-            'username': session['username'],
-            'email': session['email'],
-            'role': session['role']
-        }
-    })
+    cursor = connection.cursor()
+    
+    # Check if book is available
+    cursor.execute('SELECT copies_available FROM books WHERE id = %s', (book_id,))
+    result = cursor.fetchone()
+    
+    if not result or result[0] <= 0:
+        return jsonify({'error': 'Book not available'}), 400
+    
+    # Create borrowing record
+    due_date = datetime.now() + timedelta(days=14)  # 2 weeks borrowing period
+    
+    cursor.execute('''
+    INSERT INTO borrowings (book_id, member_id, due_date)
+    VALUES (%s, %s, %s)
+    ''', (book_id, member_id, due_date.date()))
+    
+    # Update book availability
+    cursor.execute('''
+    UPDATE books SET copies_available = copies_available - 1 WHERE id = %s
+    ''', (book_id,))
+    
+    connection.commit()
+    cursor.close()
+    connection.close()
+    
+    return jsonify({'message': 'Book borrowed successfully'})
 
-def update_user_stats(user_id, stat_type, increment=1):
-    """Helper function to update user statistics"""
-    try:
-        cursor = mysql.connection.cursor()
-        cursor.execute(f'''
-            UPDATE users 
-            SET {stat_type} = COALESCE({stat_type}, 0) + %s 
-            WHERE id = %s
-        ''', (increment, user_id))
-        mysql.connection.commit()
-        cursor.close()
-    except Exception as e:
-        print(f"Error updating user stats: {e}")
-
-# Error handlers
-@app.errorhandler(404)
-def not_found(error):
-    return jsonify({'success': False, 'message': 'Endpoint not found'}), 404
-
-@app.errorhandler(500)
-def internal_error(error):
-    return jsonify({'success': False, 'message': 'Internal server error'}), 500
+@app.route('/api/return/<int:borrowing_id>', methods=['PUT'])
+def return_book(borrowing_id):
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'error': 'Database connection failed'}), 500
+    
+    cursor = connection.cursor()
+    
+    # Get borrowing details
+    cursor.execute('SELECT book_id, due_date FROM borrowings WHERE id = %s', (borrowing_id,))
+    result = cursor.fetchone()
+    
+    if not result:
+        return jsonify({'error': 'Borrowing record not found'}), 404
+    
+    book_id, due_date = result
+    return_date = datetime.now().date()
+    
+    # Calculate fine if overdue
+    fine = 0
+    if return_date > due_date:
+        overdue_days = (return_date - due_date).days
+        fine = overdue_days * 1.0  # $1 per day fine
+    
+    # Update borrowing record
+    cursor.execute('''
+    UPDATE borrowings SET return_date = %s, status = 'returned', fine_amount = %s
+    WHERE id = %s
+    ''', (return_date, fine, borrowing_id))
+    
+    # Update book availability
+    cursor.execute('''
+    UPDATE books SET copies_available = copies_available + 1 WHERE id = %s
+    ''', (book_id,))
+    
+    connection.commit()
+    cursor.close()
+    connection.close()
+    
+    return jsonify({'message': 'Book returned successfully', 'fine': fine})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    init_database()
+    app.run(debug=True, port=5000)
