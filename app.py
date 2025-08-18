@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import mysql.connector
 from datetime import datetime, timedelta
@@ -82,8 +82,7 @@ def init_database():
 
 @app.route('/')
 def index():
-    return render_template_string(open('frontend/index.html').read())
-
+    return render_template('index.html')
 # Books endpoints
 @app.route('/api/books', methods=['GET'])
 def get_books():
