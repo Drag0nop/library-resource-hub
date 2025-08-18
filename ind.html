@@ -18,214 +18,134 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
         }
 
         .login-container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 40px;
-            border-radius: 20px;
+            background: white;
+            padding: 2.5rem;
+            border-radius: 15px;
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
             width: 100%;
             max-width: 400px;
             text-align: center;
-            transition: transform 0.3s ease;
-        }
-
-        .login-container:hover {
-            transform: translateY(-5px);
         }
 
         .login-header {
-            margin-bottom: 30px;
+            margin-bottom: 2rem;
         }
 
         .login-header h1 {
             color: #333;
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-size: 2rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
         }
 
         .login-header p {
             color: #666;
-            font-size: 1rem;
-            opacity: 0.8;
+            font-size: 0.9rem;
         }
 
         .form-group {
-            margin-bottom: 25px;
+            margin-bottom: 1.5rem;
             text-align: left;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #555;
+            font-weight: 500;
             font-size: 0.9rem;
         }
 
         .form-group input {
             width: 100%;
-            padding: 15px;
-            border: 2px solid #e1e8ed;
-            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
             font-size: 1rem;
-            transition: all 0.3s ease;
-            background: #f8f9fa;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            background-color: #fafafa;
         }
 
         .form-group input:focus {
             outline: none;
             border-color: #667eea;
-            background: white;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            transform: translateY(-2px);
+            background-color: white;
         }
 
-        .form-group input::placeholder {
-            color: #aaa;
+        .form-group input:hover {
+            border-color: #c5c9d1;
         }
 
         .login-btn {
             width: 100%;
-            padding: 15px;
+            padding: 0.75rem;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 10px;
-            font-size: 1.1rem;
-            font-weight: 600;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 10px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            margin-top: 1rem;
         }
 
         .login-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
 
         .login-btn:active {
             transform: translateY(0);
         }
 
-        .forgot-username {
-            margin-top: 20px;
+        .footer-text {
+            margin-top: 1.5rem;
+            color: #888;
+            font-size: 0.8rem;
         }
 
-        .forgot-username a {
+        .footer-text a {
             color: #667eea;
             text-decoration: none;
-            font-size: 0.9rem;
-            transition: color 0.3s ease;
         }
 
-        .forgot-username a:hover {
-            color: #764ba2;
+        .footer-text a:hover {
             text-decoration: underline;
         }
 
         @media (max-width: 480px) {
             .login-container {
-                padding: 30px 20px;
+                margin: 1rem;
+                padding: 2rem;
             }
             
             .login-header h1 {
-                font-size: 2rem;
+                font-size: 1.5rem;
             }
-        }
-
-        /* Loading animation */
-        .loading {
-            opacity: 0.7;
-            pointer-events: none;
-        }
-
-        .loading .login-btn {
-            background: #ccc;
         }
     </style>
 </head>
 <body>
     <div class="login-container">
         <div class="login-header">
-            <h1>Welcome</h1>
+            <h1>Welcome Back</h1>
             <p>Please enter your username to continue</p>
         </div>
         
-        <form id="loginForm">
+        <form action="#" method="post">
             <div class="form-group">
                 <label for="username">Username</label>
-                <input 
-                    type="text" 
-                    id="username" 
-                    name="username" 
-                    placeholder="Enter your username"
-                    required
-                    autocomplete="username"
-                >
+                <input type="text" id="username" name="username" placeholder="Enter your username" required>
             </div>
             
-            <button type="submit" class="login-btn">
-                Sign In
-            </button>
+            <button type="submit" class="login-btn">Sign In</button>
         </form>
         
-        <div class="forgot-username">
-            <a href="#" onclick="showAlert('Contact support to recover your username'); return false;">
-                Forgot your username?
-            </a>
-        </div>
     </div>
-
-    <script>
-        const form = document.getElementById('loginForm');
-        const container = document.querySelector('.login-container');
-        
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const username = document.getElementById('username').value.trim();
-            
-            if (!username) {
-                showAlert('Please enter a username');
-                return;
-            }
-            
-            // Add loading state
-            container.classList.add('loading');
-            
-            // Simulate login process
-            setTimeout(() => {
-                container.classList.remove('loading');
-                showAlert(`Welcome, ${username}! Login successful.`);
-                
-                // Reset form after successful login
-                setTimeout(() => {
-                    form.reset();
-                }, 2000);
-            }, 1500);
-        });
-        
-        function showAlert(message) {
-            alert(message);
-        }
-        
-        // Add smooth focus animation
-        const input = document.getElementById('username');
-        input.addEventListener('focus', function() {
-            this.parentElement.style.transform = 'scale(1.02)';
-        });
-        
-        input.addEventListener('blur', function() {
-            this.parentElement.style.transform = 'scale(1)';
-        });
-    </script>
 </body>
 </html>
