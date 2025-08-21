@@ -1,17 +1,7 @@
-your_project/
+LIBRARY_MANAGEMENT_SYSTEM/
 ├── app.py (main Flask file)
 ├── templates/
-│   ├── base.html
-│   ├── login.html (your existing file)
-│   ├── index.html
-│   ├── books.html
-│   ├── my_books.html
-│   ├── 404.html
-│   └── 500.html
-└── static/
-    ├── css/
-    │   ├── login.css (your existing file)
-    │   └── style.css (new main styles)
-    └── js/
-        ├── login.js (updated for Flask)
-        └── main.js (new main functionality)
+│   └── index.html
+├── database/
+│   └── schema.sql
+├── requirements.txt
