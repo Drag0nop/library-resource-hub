@@ -1,0 +1,44 @@
+library_resource_hub/
+│
+├── app.py                      # Main Flask application entry point
+├── requirements.txt            # Dependencies list
+├── config.py                   # App configuration (DB URI, secret keys)
+│
+├── instance/
+│   └── library.db              # SQLite database file (auto-created)
+│
+├── models/                     # Database models (ORM)
+│   ├── __init__.py
+│   ├── user.py                 # User model (id, name, email, password)
+│   ├── book.py                 # Book model (id, title, author, category, etc.)
+│   ├── transaction.py          # Borrow/return record
+│
+├── routes/                     # Application routes
+│   ├── __init__.py
+│   ├── auth_routes.py          # Login, Register, Logout
+│   ├── book_routes.py          # View/Add/Edit/Delete books
+│   ├── transaction_routes.py   # Borrow and Return functionality
+│
+├── static/                     # Static files (CSS, JS, Images)
+│   ├── css/
+│   ├── js/
+│   └── images/
+│
+├── templates/                  # HTML templates
+│   ├── base.html               # Main layout
+│   ├── index.html              # Homepage
+│   ├── login.html
+│   ├── register.html
+│   ├── dashboard.html          # User dashboard
+│   ├── book_list.html
+│   ├── book_detail.html
+│
+├── utils/                      # Helper modules
+│   ├── __init__.py
+│   ├── db_helpers.py           # Common DB functions
+│   └── recommendation.py       # (Optional) AI-based recommendation logic
+│
+└── tests/                      # Unit and integration tests
+    ├── test_auth.py
+    ├── test_books.py
+    └── test_transactions.py
