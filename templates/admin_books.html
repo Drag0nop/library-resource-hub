@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Manage Books - Library Hub{% endblock %}
+{% block content %}
+  <h2>Manage Books</h2>
+  <form method="post" class="form-grid">
+    <input name="title" placeholder="Title" required>
+    <input name="author" placeholder="Author" required>
+    <input name="available_count" type="number" min="0" value="1" placeholder="Count">
+    <textarea name="description" placeholder="Description (optional)"></textarea>
+    <button type="submit">Add Book</button>
+  </form>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ID</th><th>Title</th><th>Author</th><th>Available</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for book in books %}
+      <tr>
+        <td>{{ book.id }}</td>
+        <td>{{ book.title }}</td>
+        <td>{{ book.author }}</td>
+        <td>{{ book.available_count }}</td>
+        <td>
+          <form method="post" action="{{ url_for('admin_delete_book', book_id=book.id) }}" onsubmit="return confirm('Delete this book?');">
+            <button type="submit" class="danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+        <tr><td colspan="5">No books yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
