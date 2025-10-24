@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Admin - Library Hub{% endblock %}
+{% block content %}
+  <h2>Admin Dashboard</h2>
+  <div class="stats">
+    <div class="stat"><strong>Total Users:</strong> {{ total_users }}</div>
+    <div class="stat"><strong>Total Books:</strong> {{ total_books }}</div>
+    <div class="stat"><strong>Admins:</strong> {{ admins }}</div>
+  </div>
+
+  <div class="admin-links">
+    <a class="btn" href="{{ url_for('admin_books') }}">Manage Books</a>
+    <a class="btn" href="{{ url_for('admin_users') }}">Manage Users</a>
+  </div>
+{% endblock %}

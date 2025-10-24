@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard - Library Hub{% endblock %}
+{% block content %}
+  <h2>Available Books</h2>
+  <div class="book-grid">
+    {% for book in books %}
+      <div class="book-card">
+        <h3>{{ book.title }}</h3>
+        <p class="author">{{ book.author }}</p>
+        {% if book.description %}
+          <p class="desc">{{ book.description }}</p>
+        {% endif %}
+        <p class="count">Available: {{ book.available_count }}</p>
+      </div>
+    {% else %}
+      <p>No books yet.</p>
+    {% endfor %}
+  </div>
+{% endblock %}
