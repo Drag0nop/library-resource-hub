@@ -1,0 +1,111 @@
+/* Basic reset */
+* { box-sizing: border-box; }
+
+:root {
+  --bg: #0f172a;         /* slate-900 */
+  --bg-accent: #111827;  /* gray-900 */
+  --surface: #0b1222;    /* deep blue-ish */
+  --card: rgba(255, 255, 255, 0.06);
+  --border: rgba(255, 255, 255, 0.12);
+  --text: #e5e7eb;       /* gray-200 */
+  --muted: #94a3b8;      /* slate-400 */
+  --brand: #6366f1;      /* indigo-500 */
+  --brand-strong: #4f46e5; /* indigo-600 */
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f8fafc;            /* slate-50 */
+    --bg-accent: #eef2ff;     /* indigo-50 */
+    --surface: #ffffff;
+    --card: #ffffff;
+    --border: rgba(0, 0, 0, 0.08);
+    --text: #0f172a;          /* slate-900 */
+    --muted: #475569;         /* slate-600 */
+    --brand: #4f46e5;         /* indigo-600 */
+    --brand-strong: #4338ca;  /* indigo-700 */
+  }
+}
+
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  color: var(--text);
+  background: radial-gradient(1200px 600px at 80% -10%, var(--bg-accent), transparent),
+              radial-gradient(1000px 600px at -20% 110%, var(--bg-accent), transparent),
+              var(--bg);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--card);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  display: grid;
+  gap: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.login-card input {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 16px;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.login-card input::placeholder { color: var(--muted); }
+
+.login-card input:focus {
+  border-color: color-mix(in oklab, var(--brand) 60%, white 40%);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--brand) 20%, transparent);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.btn {
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: linear-gradient(0deg, rgba(255,255,255,0.02), rgba(255,255,255,0.02)), var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition: transform 80ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease;
+}
+
+.btn:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+.btn:active { transform: translateY(1px); }
+
+.btn.primary {
+  background: linear-gradient(180deg, color-mix(in oklab, var(--brand) 85%, white 15%), var(--brand));
+  border-color: color-mix(in oklab, var(--brand) 70%, black 30%);
+  color: #ffffff;
+}
+
+.btn.primary:hover {
+  background: linear-gradient(180deg, color-mix(in oklab, var(--brand-strong) 85%, white 15%), var(--brand-strong));
+}
+
+.btn.primary:active {
+  box-shadow: 0 4px 12px color-mix(in oklab, var(--brand) 40%, transparent);
+}
