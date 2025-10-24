@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}{{ book.title }} - Library Resource Hub{% endblock %}
+
+{% block content %}
+<div class="book-detail-container">
+    <div class="book-detail-header">
+        <a href="{{ url_for('books') }}" class="back-link">
+            <i class="fas fa-arrow-left"></i> Back to Books
+        </a>
+    </div>
+
+    <div class="book-detail-content">
+        <div class="book-detail-main">
+            <div class="book-cover-large">
+                <i class="fas fa-book"></i>
+            </div>
+            
+            <div class="book-detail-info">
+                <h1 class="book-title">{{ book.title }}</h1>
+                <p class="book-author">by {{ book.author }}</p>
+                
+                <div class="book-meta-grid">
+                    <div class="meta-item">
+                        <strong>Category:</strong>
+                        <span>{{ book.category or 'Uncategorized' }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <strong>Published:</strong>
+                        <span>{{ book.published_year or 'Unknown' }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <strong>Publisher:</strong>
+                        <span>{{ book.publisher or 'Unknown' }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <strong>Language:</strong>
+                        <span>{{ book.language }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <strong>ISBN:</strong>
+                        <span>{{ book.isbn or 'Not available' }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <strong>Availability:</strong>
+                        <span class="availability {{ 'available' if book.available_copies > 0 else 'unavailable' }}">
+                            {{ book.available_copies }} of {{ book.total_copies }} available
+                        </span>
+                    </div>
+                </div>
+                
+                {% if book.description %}
+                    <div class="book-description">
+                        <h3>Description</h3>
+                        <p>{{ book.description }}</p>
+                    </div>
+                {% endif %}
+                
+                <div class="book-actions">
+                    {% if is_borrowed %}
+                        <button class="btn btn-warning return-btn" data-book-id="{{ book.id }}">
+                            <i class="fas fa-undo"></i> Return Book
+                        </button>
+                    {% elif book.available_copies > 0 %}
+                        <button class="btn btn-primary borrow-btn" data-book-id="{{ book.id }}">
+                            <i class="fas fa-book"></i> Borrow Book
+                        </button>
+                    {% else %}
+                        <span class="btn btn-disabled">
+                            <i class="fas fa-times"></i> Currently Unavailable
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="book-detail-sidebar">
+            <div class="sidebar-section">
+                <h3>Quick Actions</h3>
+                <div class="action-buttons">
+                    <a href="{{ url_for('books') }}" class="btn btn-outline btn-full">
+                        <i class="fas fa-search"></i> Browse More Books
+                    </a>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline btn-full">
+                        <i class="fas fa-tachometer-alt"></i> Go to Dashboard
+                    </a>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>Book Details</h3>
+                <div class="detail-list">
+                    <div class="detail-item">
+                        <span class="detail-label">Added to Library:</span>
+                        <span class="detail-value">{{ book.created_at.strftime('%B %d, %Y') }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Last Updated:</span>
+                        <span class="detail-value">{{ book.updated_at.strftime('%B %d, %Y') }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('click', async function(e) {
+    if (e.target.classList.contains('borrow-btn') || e.target.closest('.borrow-btn')) {
+        const bookId = e.target.dataset.bookId || e.target.closest('.borrow-btn').dataset.bookId;
+        await borrowBook(bookId);
+    }
+    
+    if (e.target.classList.contains('return-btn') || e.target.closest('.return-btn')) {
+        const bookId = e.target.dataset.bookId || e.target.closest('.return-btn').dataset.bookId;
+        await returnBook(bookId);
+    }
+});
+
+async function borrowBook(bookId) {
+    try {
+        const response = await fetch(`/borrow/${bookId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showNotification(result.message, 'error');
+        }
+    } catch (error) {
+        showNotification('An error occurred. Please try again.', 'error');
+    }
+}
+
+async function returnBook(bookId) {
+    try {
+        const response = await fetch(`/return/${bookId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showNotification(result.message, 'error');
+        }
+    } catch (error) {
+        showNotification('An error occurred. Please try again.', 'error');
+    }
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `flash-message flash-${type}`;
+    notification.innerHTML = `
+        <span class="flash-text">${message}</span>
+        <button class="flash-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    document.querySelector('.main-content').insertBefore(notification, document.querySelector('.main-content').firstChild);
+}
+</script>
+{% endblock %}

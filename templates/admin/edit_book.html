@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Book - Admin{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header">
+        <div class="header-content">
+            <h1>Edit Book</h1>
+            <p>Update book information</p>
+        </div>
+        <a href="{{ url_for('admin.admin_books') }}" class="btn btn-outline">
+            <i class="fas fa-arrow-left"></i> Back to Books
+        </a>
+    </div>
+
+    <div class="form-container">
+        <form class="admin-form" id="editBookForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="title">Book Title *</label>
+                    <input type="text" id="title" name="title" value="{{ book.title }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="author">Author *</label>
+                    <input type="text" id="author" name="author" value="{{ book.author }}" required>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="isbn">ISBN</label>
+                    <input type="text" id="isbn" name="isbn" value="{{ book.isbn or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <select id="category" name="category">
+                        <option value="">Select Category</option>
+                        <option value="Fiction" {{ 'selected' if book.category == 'Fiction' else '' }}>Fiction</option>
+                        <option value="Non-Fiction" {{ 'selected' if book.category == 'Non-Fiction' else '' }}>Non-Fiction</option>
+                        <option value="Science" {{ 'selected' if book.category == 'Science' else '' }}>Science</option>
+                        <option value="Technology" {{ 'selected' if book.category == 'Technology' else '' }}>Technology</option>
+                        <option value="History" {{ 'selected' if book.category == 'History' else '' }}>History</option>
+                        <option value="Biography" {{ 'selected' if book.category == 'Biography' else '' }}>Biography</option>
+                        <option value="Literature" {{ 'selected' if book.category == 'Literature' else '' }}>Literature</option>
+                        <option value="Philosophy" {{ 'selected' if book.category == 'Philosophy' else '' }}>Philosophy</option>
+                        <option value="Art" {{ 'selected' if book.category == 'Art' else '' }}>Art</option>
+                        <option value="Music" {{ 'selected' if book.category == 'Music' else '' }}>Music</option>
+                        <option value="Sports" {{ 'selected' if book.category == 'Sports' else '' }}>Sports</option>
+                        <option value="Health" {{ 'selected' if book.category == 'Health' else '' }}>Health</option>
+                        <option value="Business" {{ 'selected' if book.category == 'Business' else '' }}>Business</option>
+                        <option value="Education" {{ 'selected' if book.category == 'Education' else '' }}>Education</option>
+                        <option value="Other" {{ 'selected' if book.category == 'Other' else '' }}>Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="published_year">Published Year</label>
+                    <input type="number" id="published_year" name="published_year" 
+                           value="{{ book.published_year or '' }}" min="1000" max="2024">
+                </div>
+                <div class="form-group">
+                    <label for="publisher">Publisher</label>
+                    <input type="text" id="publisher" name="publisher" value="{{ book.publisher or '' }}">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="language">Language</label>
+                    <select id="language" name="language">
+                        <option value="English" {{ 'selected' if book.language == 'English' else '' }}>English</option>
+                        <option value="Spanish" {{ 'selected' if book.language == 'Spanish' else '' }}>Spanish</option>
+                        <option value="French" {{ 'selected' if book.language == 'French' else '' }}>French</option>
+                        <option value="German" {{ 'selected' if book.language == 'German' else '' }}>German</option>
+                        <option value="Italian" {{ 'selected' if book.language == 'Italian' else '' }}>Italian</option>
+                        <option value="Portuguese" {{ 'selected' if book.language == 'Portuguese' else '' }}>Portuguese</option>
+                        <option value="Chinese" {{ 'selected' if book.language == 'Chinese' else '' }}>Chinese</option>
+                        <option value="Japanese" {{ 'selected' if book.language == 'Japanese' else '' }}>Japanese</option>
+                        <option value="Korean" {{ 'selected' if book.language == 'Korean' else '' }}>Korean</option>
+                        <option value="Arabic" {{ 'selected' if book.language == 'Arabic' else '' }}>Arabic</option>
+                        <option value="Russian" {{ 'selected' if book.language == 'Russian' else '' }}>Russian</option>
+                        <option value="Other" {{ 'selected' if book.language == 'Other' else '' }}>Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="total_copies">Total Copies *</label>
+                    <input type="number" id="total_copies" name="total_copies" 
+                           value="{{ book.total_copies }}" min="1" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" name="description" rows="4" 
+                          placeholder="Enter book description...">{{ book.description or '' }}</textarea>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-outline" onclick="window.history.back()">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Update Book
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('editBookForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData);
+    
+    // Convert empty strings to null for optional fields
+    Object.keys(data).forEach(key => {
+        if (data[key] === '') {
+            data[key] = null;
+        }
+    });
+    
+    try {
+        const response = await fetch(`/admin/books/edit/{{ book.id }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            setTimeout(() => {
+                window.location.href = '/admin/books';
+            }, 1500);
+        } else {
+            showNotification(result.message, 'error');
+        }
+    } catch (error) {
+        showNotification('An error occurred. Please try again.', 'error');
+    }
+});
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `flash-message flash-${type}`;
+    notification.innerHTML = `
+        <span class="flash-text">${message}</span>
+        <button class="flash-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    document.querySelector('.main-content').insertBefore(notification, document.querySelector('.main-content').firstChild);
+}
+</script>
+{% endblock %}

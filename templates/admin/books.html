@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Books - Admin{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header">
+        <div class="header-content">
+            <h1>Manage Books</h1>
+            <p>Add, edit, or remove books from the library</p>
+        </div>
+        <a href="{{ url_for('admin.admin_add_book') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add New Book
+        </a>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="admin-filters">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="search-input" placeholder="Search books...">
+        </div>
+        <button class="btn btn-outline" id="search-btn">
+            <i class="fas fa-search"></i> Search
+        </button>
+    </div>
+
+    <!-- Books Table -->
+    <div class="admin-table-container">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Author</th>
+                    <th>Category</th>
+                    <th>Available</th>
+                    <th>Total</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for book in books.items %}
+                    <tr>
+                        <td>
+                            <div class="book-title-cell">
+                                <strong>{{ book.title }}</strong>
+                                {% if book.isbn %}
+                                    <span class="book-isbn">ISBN: {{ book.isbn }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>{{ book.author }}</td>
+                        <td>
+                            <span class="category-badge">{{ book.category or 'Uncategorized' }}</span>
+                        </td>
+                        <td>
+                            <span class="availability {{ 'available' if book.available_copies > 0 else 'unavailable' }}">
+                                {{ book.available_copies }}
+                            </span>
+                        </td>
+                        <td>{{ book.total_copies }}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="{{ url_for('admin.admin_edit_book', book_id=book.id) }}" 
+                                   class="btn btn-sm btn-outline">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <button class="btn btn-sm btn-danger delete-btn" 
+                                        data-book-id="{{ book.id }}" 
+                                        data-book-title="{{ book.title }}">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if books.pages > 1 %}
+        <div class="pagination">
+            {% if books.has_prev %}
+                <a href="{{ url_for('admin.admin_books', page=books.prev_num) }}" class="pagination-btn">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </a>
+            {% endif %}
+            
+            <span class="pagination-info">
+                Page {{ books.page }} of {{ books.pages }}
+            </span>
+            
+            {% if books.has_next %}
+                <a href="{{ url_for('admin.admin_books', page=books.next_num) }}" class="pagination-btn">
+                    Next <i class="fas fa-chevron-right"></i>
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal" id="deleteModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Confirm Delete</h3>
+            <button class="modal-close" onclick="closeModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to delete the book "<span id="bookTitle"></span>"?</p>
+            <p class="warning-text">This action cannot be undone.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-danger" id="confirmDelete">Delete Book</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let bookToDelete = null;
+
+// Search functionality
+document.getElementById('search-btn').addEventListener('click', function() {
+    const searchTerm = document.getElementById('search-input').value;
+    window.location.href = `{{ url_for('admin.admin_books') }}?search=${encodeURIComponent(searchTerm)}`;
+});
+
+// Enter key search
+document.getElementById('search-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        const searchTerm = this.value;
+        window.location.href = `{{ url_for('admin.admin_books') }}?search=${encodeURIComponent(searchTerm)}`;
+    }
+});
+
+// Delete book functionality
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('delete-btn') || e.target.closest('.delete-btn')) {
+        const button = e.target.closest('.delete-btn');
+        bookToDelete = button.dataset.bookId;
+        document.getElementById('bookTitle').textContent = button.dataset.bookTitle;
+        document.getElementById('deleteModal').style.display = 'block';
+    }
+});
+
+document.getElementById('confirmDelete').addEventListener('click', async function() {
+    if (!bookToDelete) return;
+    
+    try {
+        const response = await fetch(`/admin/books/delete/${bookToDelete}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showNotification(result.message, 'error');
+        }
+    } catch (error) {
+        showNotification('An error occurred. Please try again.', 'error');
+    }
+    
+    closeModal();
+});
+
+function closeModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+    bookToDelete = null;
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `flash-message flash-${type}`;
+    notification.innerHTML = `
+        <span class="flash-text">${message}</span>
+        <button class="flash-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    document.querySelector('.main-content').insertBefore(notification, document.querySelector('.main-content').firstChild);
+}
+
+// Close modal when clicking outside
+window.addEventListener('click', function(e) {
+    const modal = document.getElementById('deleteModal');
+    if (e.target === modal) {
+        closeModal();
+    }
+});
+</script>
+{% endblock %}

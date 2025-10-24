@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Books - Library Resource Hub{% endblock %}
+
+{% block content %}
+<div class="books-container">
+    <div class="books-header">
+        <h1>Library Collection</h1>
+        <p>Discover and borrow from our extensive collection</p>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="books-filters">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="search-input" placeholder="Search books by title or author...">
+        </div>
+        
+        <div class="filter-group">
+            <select id="category-filter">
+                <option value="">All Categories</option>
+                {% for category in categories %}
+                    <option value="{{ category }}">{{ category }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <button class="btn btn-primary" id="search-btn">
+            <i class="fas fa-search"></i> Search
+        </button>
+    </div>
+
+    <!-- Books Grid -->
+    <div class="books-grid" id="books-grid">
+        {% for book in books.items %}
+            <div class="book-card" data-book-id="{{ book.id }}">
+                <div class="book-cover">
+                    <i class="fas fa-book"></i>
+                </div>
+                <div class="book-info">
+                    <h3 class="book-title">{{ book.title }}</h3>
+                    <p class="book-author">{{ book.author }}</p>
+                    <p class="book-category">{{ book.category }}</p>
+                    <div class="book-meta">
+                        <span class="book-year">{{ book.published_year }}</span>
+                        <span class="book-copies">{{ book.available_copies }} available</span>
+                    </div>
+                    <div class="book-actions">
+                        <a href="{{ url_for('book_detail', book_id=book.id) }}" 
+                           class="btn btn-sm btn-outline">View Details</a>
+                        {% if book.available_copies > 0 %}
+                            <button class="btn btn-sm btn-primary borrow-btn" 
+                                    data-book-id="{{ book.id }}">
+                                Borrow
+                            </button>
+                        {% else %}
+                            <span class="btn btn-sm btn-disabled">Unavailable</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if books.pages > 1 %}
+        <div class="pagination">
+            {% if books.has_prev %}
+                <a href="{{ url_for('books', page=books.prev_num) }}" class="pagination-btn">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </a>
+            {% endif %}
+            
+            <span class="pagination-info">
+                Page {{ books.page }} of {{ books.pages }}
+            </span>
+            
+            {% if books.has_next %}
+                <a href="{{ url_for('books', page=books.next_num) }}" class="pagination-btn">
+                    Next <i class="fas fa-chevron-right"></i>
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- Empty State -->
+    <div class="empty-state" id="empty-state" style="display: none;">
+        <i class="fas fa-search"></i>
+        <h3>No books found</h3>
+        <p>Try adjusting your search criteria</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentPage = 1;
+let currentSearch = '';
+let currentCategory = '';
+
+// Search functionality
+document.getElementById('search-btn').addEventListener('click', function() {
+    currentSearch = document.getElementById('search-input').value;
+    currentCategory = document.getElementById('category-filter').value;
+    currentPage = 1;
+    loadBooks();
+});
+
+// Enter key search
+document.getElementById('search-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        currentSearch = this.value;
+        currentCategory = document.getElementById('category-filter').value;
+        currentPage = 1;
+        loadBooks();
+    }
+});
+
+// Category filter change
+document.getElementById('category-filter').addEventListener('change', function() {
+    currentCategory = this.value;
+    currentPage = 1;
+    loadBooks();
+});
+
+// Borrow book functionality
+document.addEventListener('click', async function(e) {
+    if (e.target.classList.contains('borrow-btn')) {
+        const bookId = e.target.dataset.bookId;
+        await borrowBook(bookId);
+    }
+});
+
+async function loadBooks() {
+    try {
+        const params = new URLSearchParams({
+            page: currentPage,
+            search: currentSearch,
+            category: currentCategory
+        });
+        
+        const response = await fetch(`/api/books?${params}`);
+        const data = await response.json();
+        
+        displayBooks(data.books);
+        updatePagination(data);
+        
+    } catch (error) {
+        console.error('Error loading books:', error);
+        showNotification('Error loading books. Please try again.', 'error');
+    }
+}
+
+function displayBooks(books) {
+    const booksGrid = document.getElementById('books-grid');
+    const emptyState = document.getElementById('empty-state');
+    
+    if (books.length === 0) {
+        booksGrid.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+    }
+    
+    booksGrid.style.display = 'grid';
+    emptyState.style.display = 'none';
+    
+    booksGrid.innerHTML = books.map(book => `
+        <div class="book-card" data-book-id="${book.id}">
+            <div class="book-cover">
+                <i class="fas fa-book"></i>
+            </div>
+            <div class="book-info">
+                <h3 class="book-title">${book.title}</h3>
+                <p class="book-author">${book.author}</p>
+                <p class="book-category">${book.category || 'Uncategorized'}</p>
+                <div class="book-meta">
+                    <span class="book-year">${book.published_year || 'N/A'}</span>
+                    <span class="book-copies">${book.available_copies} available</span>
+                </div>
+                <div class="book-actions">
+                    <a href="/book/${book.id}" class="btn btn-sm btn-outline">View Details</a>
+                    ${book.available_copies > 0 ? 
+                        `<button class="btn btn-sm btn-primary borrow-btn" data-book-id="${book.id}">Borrow</button>` :
+                        `<span class="btn btn-sm btn-disabled">Unavailable</span>`
+                    }
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updatePagination(data) {
+    // Update pagination controls if needed
+    // This is a simplified version - you might want to implement full pagination
+}
+
+async function borrowBook(bookId) {
+    try {
+        const response = await fetch(`/borrow/${bookId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            loadBooks(); // Refresh the books list
+        } else {
+            showNotification(result.message, 'error');
+        }
+    } catch (error) {
+        showNotification('An error occurred. Please try again.', 'error');
+    }
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `flash-message flash-${type}`;
+    notification.innerHTML = `
+        <span class="flash-text">${message}</span>
+        <button class="flash-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    document.querySelector('.main-content').insertBefore(notification, document.querySelector('.main-content').firstChild);
+}
+
+// Load books on page load
+document.addEventListener('DOMContentLoaded', loadBooks);
+</script>
+{% endblock %}

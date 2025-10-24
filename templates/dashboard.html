@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Library Resource Hub{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1>Welcome back, {{ current_user.username }}!</h1>
+        <p>Here's what's happening in your library</p>
+    </div>
+
+    <div class="dashboard-grid">
+        <!-- Quick Stats -->
+        <div class="stats-cards">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-book"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="borrowed-count">{{ user_books|length }}</h3>
+                    <p>Books Borrowed</p>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="due-soon-count">0</h3>
+                    <p>Due Soon</p>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="overdue-count">0</h3>
+                    <p>Overdue</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- My Borrowed Books -->
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h2>My Borrowed Books</h2>
+                <a href="{{ url_for('books') }}" class="btn btn-outline">View All</a>
+            </div>
+            
+            {% if user_books %}
+                <div class="books-grid">
+                    {% for transaction in user_books %}
+                        <div class="book-card">
+                            <div class="book-cover">
+                                <i class="fas fa-book"></i>
+                            </div>
+                            <div class="book-info">
+                                <h3>{{ transaction.book.title }}</h3>
+                                <p class="book-author">{{ transaction.book.author }}</p>
+                                <p class="book-due">
+                                    Due: {{ transaction.due_date.strftime('%B %d, %Y') }}
+                                </p>
+                                <div class="book-actions">
+                                    <button class="btn btn-sm btn-outline return-btn" 
+                                            data-book-id="{{ transaction.book.id }}">
+                                        Return Book
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-book-open"></i>
+                    <h3>No books borrowed</h3>
+                    <p>Start exploring our collection!</p>
+                    <a href="{{ url_for('books') }}" class="btn btn-primary">Browse Books</a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Recent Books -->
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h2>Recently Added Books</h2>
+                <a href="{{ url_for('books') }}" class="btn btn-outline">View All</a>
+            </div>
+            
+            <div class="books-grid">
+                {% for book in recent_books %}
+                    <div class="book-card">
+                        <div class="book-cover">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <div class="book-info">
+                            <h3>{{ book.title }}</h3>
+                            <p class="book-author">{{ book.author }}</p>
+                            <p class="book-category">{{ book.category }}</p>
+                            <div class="book-actions">
+                                <a href="{{ url_for('book_detail', book_id=book.id) }}" 
+                                   class="btn btn-sm btn-primary">View Details</a>
+                                {% if book.available_copies > 0 %}
+                                    <button class="btn btn-sm btn-success borrow-btn" 
+                                            data-book-id="{{ book.id }}">
+                                        Borrow
+                                    </button>
+                                {% else %}
+                                    <span class="btn btn-sm btn-disabled">Unavailable</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Handle return book action
+document.addEventListener('click', async function(e) {
+    if (e.target.classList.contains('return-btn')) {
+        const bookId = e.target.dataset.bookId;
+        await returnBook(bookId);
+    }
+    
+    if (e.target.classList.contains('borrow-btn')) {
+        const bookId = e.target.dataset.bookId;
+        await borrowBook(bookId);
+    }
+});
+
+async function returnBook(bookId) {
+    try {
+        const response = await fetch(`/return/${bookId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showNotification(result.message, 'error');
+        }
+    } catch (error) {
+        showNotification('An error occurred. Please try again.', 'error');
+    }
+}
+
+async function borrowBook(bookId) {
+    try {
+        const response = await fetch(`/borrow/${bookId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showNotification(result.message, 'error');
+        }
+    } catch (error) {
+        showNotification('An error occurred. Please try again.', 'error');
+    }
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `flash-message flash-${type}`;
+    notification.innerHTML = `
+        <span class="flash-text">${message}</span>
+        <button class="flash-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    document.querySelector('.main-content').insertBefore(notification, document.querySelector('.main-content').firstChild);
+}
+
+// Calculate due soon and overdue books
+function calculateDueDates() {
+    const borrowedBooks = document.querySelectorAll('.book-due');
+    let dueSoon = 0;
+    let overdue = 0;
+    
+    borrowedBooks.forEach(book => {
+        const dueText = book.textContent;
+        const dueDate = new Date(dueText.replace('Due: ', ''));
+        const today = new Date();
+        const diffTime = dueDate - today;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays < 0) {
+            overdue++;
+        } else if (diffDays <= 3) {
+            dueSoon++;
+        }
+    });
+    
+    document.getElementById('due-soon-count').textContent = dueSoon;
+    document.getElementById('overdue-count').textContent = overdue;
+}
+
+document.addEventListener('DOMContentLoaded', calculateDueDates);
+</script>
+{% endblock %}

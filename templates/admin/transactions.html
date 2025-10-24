@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}View Transactions - Admin{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header">
+        <div class="header-content">
+            <h1>Transaction History</h1>
+            <p>Monitor all borrowing and returning activities</p>
+        </div>
+    </div>
+
+    <!-- Filter Options -->
+    <div class="admin-filters">
+        <div class="filter-group">
+            <label for="status-filter">Filter by Status:</label>
+            <select id="status-filter">
+                <option value="">All Transactions</option>
+                <option value="borrowed" {{ 'selected' if request.args.get('status') == 'borrowed' else '' }}>Borrowed</option>
+                <option value="returned" {{ 'selected' if request.args.get('status') == 'returned' else '' }}>Returned</option>
+                <option value="overdue" {{ 'selected' if request.args.get('status') == 'overdue' else '' }}>Overdue</option>
+            </select>
+        </div>
+        <button class="btn btn-outline" id="filter-btn">
+            <i class="fas fa-filter"></i> Apply Filter
+        </button>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="admin-table-container">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Book</th>
+                    <th>Borrow Date</th>
+                    <th>Due Date</th>
+                    <th>Return Date</th>
+                    <th>Status</th>
+                    <th>Days Overdue</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions.items %}
+                    <tr class="{{ 'overdue-row' if transaction.is_overdue else '' }}">
+                        <td>
+                            <div class="user-info">
+                                <strong>{{ transaction.user.username }}</strong>
+                                <span class="user-email">{{ transaction.user.email }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="book-info">
+                                <strong>{{ transaction.book.title }}</strong>
+                                <span class="book-author">by {{ transaction.book.author }}</span>
+                            </div>
+                        </td>
+                        <td>{{ transaction.borrow_date.strftime('%B %d, %Y') }}</td>
+                        <td>{{ transaction.due_date.strftime('%B %d, %Y') }}</td>
+                        <td>
+                            {% if transaction.return_date %}
+                                {{ transaction.return_date.strftime('%B %d, %Y') }}
+                            {% else %}
+                                <span class="text-muted">Not returned</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="status-badge status-{{ transaction.status }}">
+                                {{ transaction.status.title() }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if transaction.is_overdue %}
+                                <span class="overdue-days">
+                                    {{ (transaction.due_date - now).days }} days
+                                </span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if transactions.pages > 1 %}
+        <div class="pagination">
+            {% if transactions.has_prev %}
+                <a href="{{ url_for('admin.admin_transactions', page=transactions.prev_num, status=request.args.get('status', '')) }}" class="pagination-btn">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </a>
+            {% endif %}
+            
+            <span class="pagination-info">
+                Page {{ transactions.page }} of {{ transactions.pages }}
+            </span>
+            
+            {% if transactions.has_next %}
+                <a href="{{ url_for('admin.admin_transactions', page=transactions.next_num, status=request.args.get('status', '')) }}" class="pagination-btn">
+                    Next <i class="fas fa-chevron-right"></i>
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <!-- Summary Stats -->
+    <div class="transaction-stats">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-book"></i>
+            </div>
+            <div class="stat-content">
+                <h3>{{ transactions.total }}</h3>
+                <p>Total Transactions</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+            <div class="stat-content">
+                <h3>{{ transactions.items | selectattr('status', 'equalto', 'borrowed') | list | length }}</h3>
+                <p>Active Borrows</p>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="stat-content">
+                <h3>{{ transactions.items | selectattr('is_overdue', 'equalto', true) | list | length }}</h3>
+                <p>Overdue Books</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Filter functionality
+document.getElementById('filter-btn').addEventListener('click', function() {
+    const statusFilter = document.getElementById('status-filter').value;
+    const url = new URL(window.location);
+    
+    if (statusFilter) {
+        url.searchParams.set('status', statusFilter);
+    } else {
+        url.searchParams.delete('status');
+    }
+    
+    window.location.href = url.toString();
+});
+
+// Auto-apply filter on change
+document.getElementById('status-filter').addEventListener('change', function() {
+    const statusFilter = this.value;
+    const url = new URL(window.location);
+    
+    if (statusFilter) {
+        url.searchParams.set('status', statusFilter);
+    } else {
+        url.searchParams.delete('status');
+    }
+    
+    window.location.href = url.toString();
+});
+</script>
+
+<style>
+.user-info, .book-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.user-email, .book-author {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-borrowed {
+    background: var(--info-color);
+    color: white;
+}
+
+.status-returned {
+    background: var(--success-color);
+    color: white;
+}
+
+.status-overdue {
+    background: var(--error-color);
+    color: white;
+}
+
+.overdue-row {
+    background: #fef2f2;
+    border-left: 4px solid var(--error-color);
+}
+
+.overdue-days {
+    color: var(--error-color);
+    font-weight: 600;
+}
+
+.text-muted {
+    color: var(--text-muted);
+}
+
+.transaction-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.stat-card {
+    background: var(--bg-primary);
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+}
+
+.stat-content h3 {
+    font-size: 2rem;
+    margin-bottom: 0.25rem;
+    color: var(--text-primary);
+}
+
+.stat-content p {
+    color: var(--text-secondary);
+    margin: 0;
+}
+</style>
+{% endblock %}

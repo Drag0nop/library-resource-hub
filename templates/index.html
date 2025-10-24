@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome - Library Resource Hub{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="hero-container">
+        <div class="hero-content">
+            <h1 class="hero-title">Welcome to Library Resource Hub</h1>
+            <p class="hero-subtitle">Discover, borrow, and explore thousands of books at your fingertips</p>
+            <div class="hero-actions">
+                {% if not current_user.is_authenticated %}
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-large">
+                        <i class="fas fa-user-plus"></i> Get Started
+                    </a>
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-large">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-large">
+                        <i class="fas fa-tachometer-alt"></i> Go to Dashboard
+                    </a>
+                    <a href="{{ url_for('books') }}" class="btn btn-secondary btn-large">
+                        <i class="fas fa-books"></i> Browse Books
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="hero-image">
+            <i class="fas fa-book-reader"></i>
+        </div>
+    </div>
+</div>
+
+<div class="features-section">
+    <div class="container">
+        <h2 class="section-title">Why Choose Our Library?</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h3>Easy Search</h3>
+                <p>Find books quickly with our advanced search and filtering system.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-mobile-alt"></i>
+                </div>
+                <h3>Mobile Friendly</h3>
+                <p>Access your library from any device, anywhere, anytime.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <h3>24/7 Access</h3>
+                <p>Browse and manage your books around the clock.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <h3>Smart Notifications</h3>
+                <p>Get reminders for due dates and new book arrivals.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="stats-section">
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-number" id="total-books">0</div>
+                <div class="stat-label">Total Books</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="total-users">0</div>
+                <div class="stat-label">Active Users</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="books-borrowed">0</div>
+                <div class="stat-label">Books Borrowed</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="categories">0</div>
+                <div class="stat-label">Categories</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Animate stats on page load
+    function animateStats() {
+        const statNumbers = document.querySelectorAll('.stat-number');
+        statNumbers.forEach(stat => {
+            const target = parseInt(stat.textContent);
+            let current = 0;
+            const increment = target / 50;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    stat.textContent = target;
+                    clearInterval(timer);
+                } else {
+                    stat.textContent = Math.floor(current);
+                }
+            }, 30);
+        });
+    }
+
+    // Load stats from API
+    async function loadStats() {
+        try {
+            const response = await fetch('/api/stats');
+            const data = await response.json();
+            
+            document.getElementById('total-books').textContent = data.total_books || 0;
+            document.getElementById('total-users').textContent = data.total_users || 0;
+            document.getElementById('books-borrowed').textContent = data.books_borrowed || 0;
+            document.getElementById('categories').textContent = data.categories || 0;
+            
+            animateStats();
+        } catch (error) {
+            console.error('Error loading stats:', error);
+            // Set default values
+            document.getElementById('total-books').textContent = '1000+';
+            document.getElementById('total-users').textContent = '500+';
+            document.getElementById('books-borrowed').textContent = '2500+';
+            document.getElementById('categories').textContent = '50+';
+            animateStats();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadStats);
+</script>
+{% endblock %}
