@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Library Resource Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-50 text-gray-800">
+    <!-- Navbar -->
+    <nav class="bg-indigo-600 text-white py-3 px-6 flex justify-between items-center shadow-md">
+      <h1 class="font-semibold text-lg"><a href="{{ url_for('home') }}">📚 Library Hub</a></h1>
+      <div>
+        {% if current_user.is_authenticated %}
+          <a href="{{ url_for('view_books') }}" class="mx-2 hover:text-yellow-200">Books</a>
+          <a href="{{ url_for('user_history') }}" class="mx-2 hover:text-yellow-200">My History</a>
+          {% if current_user.is_admin %}
+            <a href="{{ url_for('admin_dashboard') }}" class="mx-2 hover:text-yellow-200">Admin</a>
+          {% endif %}
+          <a href="{{ url_for('logout') }}" class="ml-4 bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100">Logout</a>
+        {% else %}
+          <a href="{{ url_for('login') }}" class="bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100">Login</a>
+        {% endif %}
+      </div>
+    </nav>
+
+    <!-- Flash messages -->
+    <div class="container mx-auto mt-4 px-4">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="space-y-2">
+            {% for cat, msg in messages %}
+              <div class="p-3 rounded-lg text-white {% if cat == 'success' %}bg-green-500{% elif cat == 'danger' %}bg-red-500{% elif cat == 'info' %}bg-blue-500{% else %}bg-gray-500{% endif %}">
+                {{ msg }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+    </div>
+
+    <main class="container mx-auto p-6">
+      <!-- {% block content %}{% endblock %} -->
+      <h2>Manage Users</h2>
+        <form action="{{ url_for('add_user') }}" method="post">
+          <input name="username" placeholder="username" required>
+          <input name="password" placeholder="initial password" required>
+          <button type="submit">Create User</button>
+        </form>
+        <ul>
+          {% for u in users %}
+            <li>{{ u.username }} {% if u.is_admin %}(admin){% endif %} — <a href="{{ url_for('admin_user_history', user_id=u.id) }}">History</a></li>
+          {% endfor %}
+        </ul>
+    </main>
+  </body>
+</html>

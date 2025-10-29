@@ -1,309 +1,208 @@
-from flask import Flask, request, jsonify, render_template
-from flask_cors import CORS
-import mysql.connector
-from datetime import datetime, timedelta
-import os
+from flask import Flask, render_template, request, redirect, url_for, flash
+from models import db, User, Book, Borrow
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 
 app = Flask(__name__)
-CORS(app)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///library.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = 'change-me-to-a-secure-random-value'
 
-# Database configuration
-DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': 'kn@g@rk0ti',  # Change this
-    'database': 'library_db'
-}
+db.init_app(app)
+login_manager = LoginManager()
+login_manager.login_view = 'login'
+login_manager.init_app(app)
 
-def get_db_connection():
-    try:
-        connection = mysql.connector.connect(**DB_CONFIG)
-        return connection
-    except mysql.connector.Error as err:
-        print(f"Error: {err}")
-        return None
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
-# Initialize database tables
-def init_database():
-    connection = get_db_connection()
-    if connection:
-        cursor = connection.cursor()
-        
-        # Create books table
-        cursor.execute('''
-        CREATE TABLE IF NOT EXISTS books (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            title VARCHAR(255) NOT NULL,
-            author VARCHAR(255) NOT NULL,
-            isbn VARCHAR(20) UNIQUE,
-            genre VARCHAR(100),
-            publication_year INT,
-            copies_available INT DEFAULT 1,
-            total_copies INT DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-        ''')
-        
-        # Create members table
-        cursor.execute('''
-        CREATE TABLE IF NOT EXISTS members (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(255) NOT NULL,
-            email VARCHAR(255) UNIQUE NOT NULL,
-            phone VARCHAR(20),
-            address TEXT,
-            membership_date DATE DEFAULT (CURDATE()),
-            status ENUM('active', 'inactive') DEFAULT 'active'
-        )
-        ''')
-        
-        # Create borrowings table
-        cursor.execute('''
-        CREATE TABLE IF NOT EXISTS borrowings (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            book_id INT,
-            member_id INT,
-            borrow_date DATE DEFAULT (CURDATE()),
-            due_date DATE,
-            return_date DATE NULL,
-            status ENUM('borrowed', 'returned', 'overdue') DEFAULT 'borrowed',
-            fine_amount DECIMAL(10,2) DEFAULT 0.00,
-            FOREIGN KEY (book_id) REFERENCES books(id),
-            FOREIGN KEY (member_id) REFERENCES members(id)
-        )
-        ''')
-        
-        connection.commit()
-        cursor.close()
-        connection.close()
-        print("Database initialized successfully!")
+def create_tables():
+    with app.app_context():
+        db.create_all()
+        if not User.query.filter_by(username='admin').first():
+            admin = User(username='admin', password_hash=generate_password_hash('admin123'), is_admin=True)
+            db.session.add(admin)
+            db.session.commit()
 
-# API Routes
+# --- Authentication ---
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        user = User.query.filter_by(username=username).first()
+        if user and check_password_hash(user.password_hash, password):
+            login_user(user)
+            flash('Logged in successfully.', 'success')
+            next_page = request.args.get('next') or (url_for('admin_dashboard') if user.is_admin else url_for('view_books'))
+            return redirect(next_page)
+        flash('Invalid credentials.', 'danger')
+    return render_template('login.html')
 
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('Logged out.', 'info')
+    return redirect(url_for('login'))
+
+# --- Admin dashboard ---
 @app.route('/')
-def index():
-    return render_template('index.html')
-# Books endpoints
-@app.route('/api/books', methods=['GET'])
-def get_books():
-    connection = get_db_connection()
-    if not connection:
-        return jsonify({'error': 'Database connection failed'}), 500
-    
-    cursor = connection.cursor(dictionary=True)
-    cursor.execute('SELECT * FROM books ORDER BY title')
-    books = cursor.fetchall()
-    cursor.close()
-    connection.close()
-    
-    return jsonify(books)
+@login_required
+def home():
+    if current_user.is_admin:
+        return redirect(url_for('admin_dashboard'))
+    return redirect(url_for('view_books'))
 
-@app.route('/api/books', methods=['POST'])
+@app.route('/admin')
+@login_required
+def admin_dashboard():
+    if not current_user.is_admin:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('view_books'))
+    books = Book.query.all()
+    users = User.query.all()
+    borrows = Borrow.query.order_by(Borrow.borrowed_at.desc()).all()
+    return render_template('admin_dashboard.html', books=books, users=users, borrows=borrows)
+
+# --- Book management ---
+@app.route('/admin/books')
+@login_required
+def manage_books():
+    if not current_user.is_admin:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('view_books'))
+    books = Book.query.all()
+    return render_template('manage_books.html', books=books)
+
+@app.route('/admin/books/add', methods=['GET', 'POST'])
+@login_required
 def add_book():
-    data = request.get_json()
-    
-    connection = get_db_connection()
-    if not connection:
-        return jsonify({'error': 'Database connection failed'}), 500
-    
-    cursor = connection.cursor()
-    try:
-        cursor.execute('''
-        INSERT INTO books (title, author, isbn, genre, publication_year, copies_available, total_copies)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-        ''', (
-            data['title'], data['author'], data.get('isbn'),
-            data.get('genre'), data.get('publication_year'),
-            data.get('copies_available', 1), data.get('total_copies', 1)
-        ))
-        connection.commit()
-        book_id = cursor.lastrowid
-        cursor.close()
-        connection.close()
-        
-        return jsonify({'id': book_id, 'message': 'Book added successfully'}), 201
-    except mysql.connector.Error as err:
-        return jsonify({'error': str(err)}), 400
+    if not current_user.is_admin:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('view_books'))
+    if request.method == 'POST':
+        title = request.form['title']
+        author = request.form['author']
+        isbn = request.form['isbn']
+        copies = int(request.form.get('copies', 1))
+        book = Book(title=title, author=author, isbn=isbn, copies=copies)
+        db.session.add(book)
+        db.session.commit()
+        flash('Book added.', 'success')
+        return redirect(url_for('manage_books'))
+    return render_template('edit_book.html', action='Add')
 
-@app.route('/api/books/<int:book_id>', methods=['PUT'])
-def update_book(book_id):
-    data = request.get_json()
-    
-    connection = get_db_connection()
-    if not connection:
-        return jsonify({'error': 'Database connection failed'}), 500
-    
-    cursor = connection.cursor()
-    try:
-        cursor.execute('''
-        UPDATE books SET title=%s, author=%s, isbn=%s, genre=%s, 
-        publication_year=%s, copies_available=%s, total_copies=%s
-        WHERE id=%s
-        ''', (
-            data['title'], data['author'], data.get('isbn'),
-            data.get('genre'), data.get('publication_year'),
-            data.get('copies_available'), data.get('total_copies'), book_id
-        ))
-        connection.commit()
-        cursor.close()
-        connection.close()
-        
-        return jsonify({'message': 'Book updated successfully'})
-    except mysql.connector.Error as err:
-        return jsonify({'error': str(err)}), 400
+@app.route('/admin/books/edit/<int:book_id>', methods=['GET', 'POST'])
+@login_required
+def edit_book(book_id):
+    if not current_user.is_admin:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('view_books'))
+    book = Book.query.get_or_404(book_id)
+    if request.method == 'POST':
+        book.title = request.form['title']
+        book.author = request.form['author']
+        book.isbn = request.form['isbn']
+        book.copies = int(request.form.get('copies', 1))
+        db.session.commit()
+        flash('Book updated.', 'success')
+        return redirect(url_for('manage_books'))
+    return render_template('edit_book.html', action='Edit', book=book)
 
-@app.route('/api/books/<int:book_id>', methods=['DELETE'])
+@app.route('/admin/books/delete/<int:book_id>', methods=['POST'])
+@login_required
 def delete_book(book_id):
-    connection = get_db_connection()
-    if not connection:
-        return jsonify({'error': 'Database connection failed'}), 500
-    
-    cursor = connection.cursor()
-    cursor.execute('DELETE FROM books WHERE id = %s', (book_id,))
-    connection.commit()
-    cursor.close()
-    connection.close()
-    
-    return jsonify({'message': 'Book deleted successfully'})
+    if not current_user.is_admin:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('view_books'))
+    book = Book.query.get_or_404(book_id)
+    db.session.delete(book)
+    db.session.commit()
+    flash('Book deleted.', 'info')
+    return redirect(url_for('manage_books'))
 
-# Members endpoints
-@app.route('/api/members', methods=['GET'])
-def get_members():
-    connection = get_db_connection()
-    if not connection:
-        return jsonify({'error': 'Database connection failed'}), 500
-    
-    cursor = connection.cursor(dictionary=True)
-    cursor.execute('SELECT * FROM members ORDER BY name')
-    members = cursor.fetchall()
-    cursor.close()
-    connection.close()
-    
-    return jsonify(members)
+# --- User management (admin creates users) ---
+@app.route('/admin/users')
+@login_required
+def manage_users():
+    if not current_user.is_admin:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('view_books'))
+    users = User.query.all()
+    return render_template('manage_users.html', users=users)
 
-@app.route('/api/members', methods=['POST'])
-def add_member():
-    data = request.get_json()
-    
-    connection = get_db_connection()
-    if not connection:
-        return jsonify({'error': 'Database connection failed'}), 500
-    
-    cursor = connection.cursor()
-    try:
-        cursor.execute('''
-        INSERT INTO members (name, email, phone, address)
-        VALUES (%s, %s, %s, %s)
-        ''', (data['name'], data['email'], data.get('phone'), data.get('address')))
-        connection.commit()
-        member_id = cursor.lastrowid
-        cursor.close()
-        connection.close()
-        
-        return jsonify({'id': member_id, 'message': 'Member added successfully'}), 201
-    except mysql.connector.Error as err:
-        return jsonify({'error': str(err)}), 400
+@app.route('/admin/users/add', methods=['POST'])
+@login_required
+def add_user():
+    if not current_user.is_admin:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('view_books'))
+    username = request.form['username']
+    password = request.form['password']
+    if User.query.filter_by(username=username).first():
+        flash('Username already exists.', 'danger')
+        return redirect(url_for('manage_users'))
+    user = User(username=username, password_hash=generate_password_hash(password), is_admin=False)
+    db.session.add(user)
+    db.session.commit()
+    flash('User created.', 'success')
+    return redirect(url_for('manage_users'))
 
-# Borrowings endpoints
-@app.route('/api/borrowings', methods=['GET'])
-def get_borrowings():
-    connection = get_db_connection()
-    if not connection:
-        return jsonify({'error': 'Database connection failed'}), 500
-    
-    cursor = connection.cursor(dictionary=True)
-    cursor.execute('''
-    SELECT b.*, bk.title as book_title, bk.author, m.name as member_name
-    FROM borrowings b
-    JOIN books bk ON b.book_id = bk.id
-    JOIN members m ON b.member_id = m.id
-    ORDER BY b.borrow_date DESC
-    ''')
-    borrowings = cursor.fetchall()
-    cursor.close()
-    connection.close()
-    
-    return jsonify(borrowings)
+# --- Borrowing ---
+@app.route('/books')
+@login_required
+def view_books():
+    books = Book.query.all()
+    return render_template('books.html', books=books)
 
-@app.route('/api/borrow', methods=['POST'])
-def borrow_book():
-    data = request.get_json()
-    book_id = data['book_id']
-    member_id = data['member_id']
-    
-    connection = get_db_connection()
-    if not connection:
-        return jsonify({'error': 'Database connection failed'}), 500
-    
-    cursor = connection.cursor()
-    
-    # Check if book is available
-    cursor.execute('SELECT copies_available FROM books WHERE id = %s', (book_id,))
-    result = cursor.fetchone()
-    
-    if not result or result[0] <= 0:
-        return jsonify({'error': 'Book not available'}), 400
-    
-    # Create borrowing record
-    due_date = datetime.now() + timedelta(days=14)  # 2 weeks borrowing period
-    
-    cursor.execute('''
-    INSERT INTO borrowings (book_id, member_id, due_date)
-    VALUES (%s, %s, %s)
-    ''', (book_id, member_id, due_date.date()))
-    
-    # Update book availability
-    cursor.execute('''
-    UPDATE books SET copies_available = copies_available - 1 WHERE id = %s
-    ''', (book_id,))
-    
-    connection.commit()
-    cursor.close()
-    connection.close()
-    
-    return jsonify({'message': 'Book borrowed successfully'})
+@app.route('/borrow/<int:book_id>', methods=['POST'])
+@login_required
+def borrow_book(book_id):
+    book = Book.query.get_or_404(book_id)
+    # simple check: allow borrow if copies > number currently borrowed
+    borrowed_count = Borrow.query.filter_by(book_id=book.id, returned_at=None).count()
+    if borrowed_count >= book.copies:
+        flash('No copies available right now.', 'warning')
+        return redirect(url_for('view_books'))
+    borrow = Borrow(user_id=current_user.id, book_id=book.id)
+    db.session.add(borrow)
+    db.session.commit()
+    flash(f'You borrowed "{book.title}".', 'success')
+    return redirect(url_for('view_books'))
 
-@app.route('/api/return/<int:borrowing_id>', methods=['PUT'])
-def return_book(borrowing_id):
-    connection = get_db_connection()
-    if not connection:
-        return jsonify({'error': 'Database connection failed'}), 500
-    
-    cursor = connection.cursor()
-    
-    # Get borrowing details
-    cursor.execute('SELECT book_id, due_date FROM borrowings WHERE id = %s', (borrowing_id,))
-    result = cursor.fetchone()
-    
-    if not result:
-        return jsonify({'error': 'Borrowing record not found'}), 404
-    
-    book_id, due_date = result
-    return_date = datetime.now().date()
-    
-    # Calculate fine if overdue
-    fine = 0
-    if return_date > due_date:
-        overdue_days = (return_date - due_date).days
-        fine = overdue_days * 1.0  # $1 per day fine
-    
-    # Update borrowing record
-    cursor.execute('''
-    UPDATE borrowings SET return_date = %s, status = 'returned', fine_amount = %s
-    WHERE id = %s
-    ''', (return_date, fine, borrowing_id))
-    
-    # Update book availability
-    cursor.execute('''
-    UPDATE books SET copies_available = copies_available + 1 WHERE id = %s
-    ''', (book_id,))
-    
-    connection.commit()
-    cursor.close()
-    connection.close()
-    
-    return jsonify({'message': 'Book returned successfully', 'fine': fine})
+@app.route('/return/<int:borrow_id>', methods=['POST'])
+@login_required
+def return_book(borrow_id):
+    borrow = Borrow.query.get_or_404(borrow_id)
+    if borrow.user_id != current_user.id and not current_user.is_admin:
+        flash('Not allowed.', 'danger')
+        return redirect(url_for('view_books'))
+    borrow.returned_at = db.func.current_timestamp()
+    db.session.commit()
+    flash('Book returned.', 'info')
+    return redirect(url_for('home'))
+
+# --- User history ---
+@app.route('/history')
+@login_required
+def user_history():
+    # only users created by admin (all users) can view their history
+    borrows = Borrow.query.filter_by(user_id=current_user.id).order_by(Borrow.borrowed_at.desc()).all()
+    return render_template('user_history.html', borrows=borrows)
+
+# --- Admin view of a user's history ---
+@app.route('/admin/user/<int:user_id>/history')
+@login_required
+def admin_user_history(user_id):
+    if not current_user.is_admin:
+        flash('Access denied.', 'danger')
+        return redirect(url_for('view_books'))
+    borrows = Borrow.query.filter_by(user_id=user_id).order_by(Borrow.borrowed_at.desc()).all()
+    user = User.query.get_or_404(user_id)
+    return render_template('user_history.html', borrows=borrows, user=user)
 
 if __name__ == '__main__':
-    init_database()
-    app.run(debug=True, port=5000)
+    create_tables()
+    app.run(debug=True)

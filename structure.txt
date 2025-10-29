@@ -1,7 +1,15 @@
-LIBRARY_MANAGEMENT_SYSTEM/
-├── app.py (main Flask file)
-├── templates/
-│   └── index.html
-├── database/
-│   └── schema.sql
+library-hub/
+├── app.py
+├── models.py
 ├── requirements.txt
+├── templates/
+│ ├── base.html
+│ ├── login.html
+│ ├── admin_dashboard.html
+│ ├── manage_books.html
+│ ├── edit_book.html
+│ ├── manage_users.html
+│ ├── user_history.html
+│ └── books.html
+└── static/
+  └── styles.css
