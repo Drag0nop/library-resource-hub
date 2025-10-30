@@ -12,7 +12,7 @@
       <h1 class="font-semibold text-lg"><a href="{{ url_for('home') }}">📚 Library Hub</a></h1>
       <div>
         {% if current_user.is_authenticated %}
-          <a href="{{ url_for('view_books') }}" class="mx-2 hover:text-yellow-200">Books</a>
+          <!-- <a href="{{ url_for('view_books') }}" class="mx-2 hover:text-yellow-200">Books</a> -->
           <a href="{{ url_for('user_history') }}" class="mx-2 hover:text-yellow-200">My History</a>
           {% if current_user.is_admin %}
             <a href="{{ url_for('admin_dashboard') }}" class="mx-2 hover:text-yellow-200">Admin</a>

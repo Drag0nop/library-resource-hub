@@ -3,23 +3,34 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Library Resource Hub</title>
+    <title>Library Resource Hub - Manage Books</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .fade-out {
+        animation: fadeOut 3s forwards;
+      }
+      @keyframes fadeOut {
+        0% { opacity: 1; }
+        80% { opacity: 1; }
+        100% { opacity: 0; display: none; }
+      }
+    </style>
   </head>
-  <body class="bg-gray-50 text-gray-800">
+
+  <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
     <!-- Navbar -->
-    <nav class="bg-indigo-600 text-white py-3 px-6 flex justify-between items-center shadow-md">
-      <h1 class="font-semibold text-lg"><a href="{{ url_for('home') }}">📚 Library Hub</a></h1>
-      <div>
+    <nav class="bg-indigo-600 text-white py-3 px-6 flex justify-between items-center shadow-lg">
+      <h1 class="font-bold text-xl">
+        <a href="{{ url_for('home') }}" class="hover:text-yellow-300 transition">📚 Library Hub</a>
+      </h1>
+      <div class="space-x-4">
         {% if current_user.is_authenticated %}
-          <a href="{{ url_for('view_books') }}" class="mx-2 hover:text-yellow-200">Books</a>
-          <a href="{{ url_for('user_history') }}" class="mx-2 hover:text-yellow-200">My History</a>
           {% if current_user.is_admin %}
-            <a href="{{ url_for('admin_dashboard') }}" class="mx-2 hover:text-yellow-200">Admin</a>
+            <a href="{{ url_for('admin_dashboard') }}" class="hover:text-yellow-200 transition">Admin</a>
           {% endif %}
-          <a href="{{ url_for('logout') }}" class="ml-4 bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100">Logout</a>
+          <a href="{{ url_for('logout') }}" class="ml-4 bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100 shadow-sm transition">Logout</a>
         {% else %}
-          <a href="{{ url_for('login') }}" class="bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100">Login</a>
+          <a href="{{ url_for('login') }}" class="bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100 transition">Login</a>
         {% endif %}
       </div>
     </nav>
@@ -30,7 +41,8 @@
         {% if messages %}
           <div class="space-y-2">
             {% for cat, msg in messages %}
-              <div class="p-3 rounded-lg text-white {% if cat == 'success' %}bg-green-500{% elif cat == 'danger' %}bg-red-500{% elif cat == 'info' %}bg-blue-500{% else %}bg-gray-500{% endif %}">
+              <div class="fade-out p-3 rounded-lg text-white text-center shadow-md 
+                {% if cat == 'success' %}bg-green-500{% elif cat == 'danger' %}bg-red-500{% elif cat == 'info' %}bg-blue-500{% else %}bg-gray-500{% endif %}">
                 {{ msg }}
               </div>
             {% endfor %}
@@ -39,21 +51,80 @@
       {% endwith %}
     </div>
 
-    <main class="container mx-auto p-6">
-      <!-- {% block content %}{% endblock %} -->
-      <h2>Manage Books</h2>
-        <a href="{{ url_for('add_book') }}">Add Book</a>
-        <ul>
-          {% for book in books %}
-            <li>
-              {{ book.title }} by {{ book.author }} — copies: {{ book.copies }}
-              <a href="{{ url_for('edit_book', book_id=book.id) }}">Edit</a>
-              <form action="{{ url_for('delete_book', book_id=book.id) }}" method="post" style="display:inline">
-                <button type="submit">Delete</button>
-              </form>
-            </li>
-          {% endfor %}
-        </ul>
+    <!-- Main content -->
+    <main class="container mx-auto p-6 flex-grow">
+      <div class="bg-white rounded-2xl shadow-lg p-8">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-2xl font-semibold text-indigo-700">📖 Manage Books</h2>
+          <a href="{{ url_for('add_book') }}" 
+             class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow transition">
+             ➕ Add Book
+          </a>
+        </div>
+
+        <!-- Search Filter -->
+        <div class="mb-4 flex justify-end">
+          <input type="text" id="bookSearch" placeholder="🔍 Search books..." 
+                 class="border border-gray-300 rounded-md px-3 py-2 w-64 focus:ring-2 focus:ring-indigo-400 outline-none transition">
+        </div>
+
+        <!-- Book list -->
+        {% if books %}
+        <div class="overflow-x-auto rounded-lg border border-gray-200">
+          <table id="booksTable" class="min-w-full bg-white border-collapse">
+            <thead class="bg-indigo-100 text-indigo-800 text-left">
+              <tr>
+                <th class="py-3 px-4 border-b">ID</th>
+                <th class="py-3 px-4 border-b">Title</th>
+                <th class="py-3 px-4 border-b">Author</th>
+                <th class="py-3 px-4 border-b">Available</th>
+                <th class="py-3 px-4 border-b text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for book in books %}
+              <tr class="hover:bg-gray-50 transition">
+                <td class="py-3 px-4 border-b">{{ book.id }}</td>
+                <td class="py-3 px-4 border-b font-medium">{{ book.title }}</td>
+                <td class="py-3 px-4 border-b">{{ book.author }}</td>
+                <td class="py-3 px-4 border-b text-center">{{ book.copies_available }}</td>
+                <td class="py-3 px-4 border-b text-center">
+                  <a href="{{ url_for('edit_book', book_id=book.id) }}" 
+                     class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md shadow-sm transition">
+                     ✏️ Edit
+                  </a>
+                  <form action="{{ url_for('delete_book', book_id=book.id) }}" 
+                        method="post" class="inline-block ml-1">
+                    <button type="submit" 
+                            onclick="return confirm('Are you sure you want to delete this book?')"
+                            class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md shadow-sm transition">
+                      🗑 Delete
+                    </button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+          <p class="text-gray-600 text-center mt-6">No books found. Add your first book to get started!</p>
+        {% endif %}
+      </div>
     </main>
+
+    <!-- JavaScript for Search Filter -->
+    <script>
+      const searchInput = document.getElementById('bookSearch');
+      const tableRows = document.querySelectorAll('#booksTable tbody tr');
+
+      searchInput.addEventListener('keyup', function() {
+        const query = this.value.toLowerCase();
+        tableRows.forEach(row => {
+          const text = row.textContent.toLowerCase();
+          row.style.display = text.includes(query) ? '' : 'none';
+        });
+      });
+    </script>
   </body>
 </html>

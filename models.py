@@ -11,7 +11,6 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
-    # optional: email, full_name, created_at
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     borrows = db.relationship('Borrow', back_populates='user')
@@ -23,7 +22,6 @@ class Book(db.Model):
     isbn = db.Column(db.String(50))
     copies = db.Column(db.Integer, default=1)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
     
     borrows = db.relationship('Borrow', back_populates='book')
     

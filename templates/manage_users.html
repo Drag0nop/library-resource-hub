@@ -3,17 +3,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Library Resource Hub</title>
+    <title>Manage Users | Library Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
+
   <body class="bg-gray-50 text-gray-800">
     <!-- Navbar -->
     <nav class="bg-indigo-600 text-white py-3 px-6 flex justify-between items-center shadow-md">
-      <h1 class="font-semibold text-lg"><a href="{{ url_for('home') }}">📚 Library Hub</a></h1>
+      <h1 class="font-semibold text-lg">
+        <a href="{{ url_for('home') }}">📚 Library Hub</a>
+      </h1>
       <div>
         {% if current_user.is_authenticated %}
-          <a href="{{ url_for('view_books') }}" class="mx-2 hover:text-yellow-200">Books</a>
-          <a href="{{ url_for('user_history') }}" class="mx-2 hover:text-yellow-200">My History</a>
           {% if current_user.is_admin %}
             <a href="{{ url_for('admin_dashboard') }}" class="mx-2 hover:text-yellow-200">Admin</a>
           {% endif %}
@@ -24,7 +25,7 @@
       </div>
     </nav>
 
-    <!-- Flash messages -->
+    <!-- Flash Messages -->
     <div class="container mx-auto mt-4 px-4">
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -39,19 +40,91 @@
       {% endwith %}
     </div>
 
+    <!-- Main Content -->
     <main class="container mx-auto p-6">
-      <!-- {% block content %}{% endblock %} -->
-      <h2>Manage Users</h2>
-        <form action="{{ url_for('add_user') }}" method="post">
-          <input name="username" placeholder="username" required>
-          <input name="password" placeholder="initial password" required>
-          <button type="submit">Create User</button>
+      <h2 class="text-3xl font-semibold mb-6">👥 Manage Users</h2>
+
+      <!-- Add User Form -->
+      <div class="bg-white shadow-md rounded-lg p-6 mb-8 border border-gray-200">
+        <h3 class="text-xl font-medium mb-4 text-gray-700">Add New User</h3>
+        <form action="{{ url_for('add_user') }}" method="post" class="flex flex-col md:flex-row gap-4">
+          <input
+            name="username"
+            placeholder="Username"
+            required
+            class="border border-gray-300 rounded-md px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          <input
+            name="password"
+            placeholder="Initial Password"
+            required
+            class="border border-gray-300 rounded-md px-3 py-2 flex-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          <button
+            type="submit"
+            class="bg-indigo-600 text-white px-5 py-2 rounded-md hover:bg-indigo-700 transition"
+          >
+            ➕ Create User
+          </button>
         </form>
-        <ul>
-          {% for u in users %}
-            <li>{{ u.username }} {% if u.is_admin %}(admin){% endif %} — <a href="{{ url_for('admin_user_history', user_id=u.id) }}">History</a></li>
-          {% endfor %}
-        </ul>
+      </div>
+
+      <!-- User List -->
+      <div class="bg-white shadow-md rounded-lg p-6 border border-gray-200">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-medium text-gray-700">Registered Users</h3>
+          <input
+            id="searchInput"
+            type="text"
+            placeholder="Search by username..."
+            class="border border-gray-300 rounded-md px-3 py-2 w-60 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+
+        {% set regular_users = users | selectattr('is_admin', 'equalto', False) | list %}
+        {% if regular_users %}
+          <table class="min-w-full border border-gray-200 text-left text-sm">
+            <thead class="bg-indigo-100">
+              <tr>
+                <th class="py-2 px-4 border-b">#</th>
+                <th class="py-2 px-4 border-b">Username</th>
+                <th class="py-2 px-4 border-b text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="userTable">
+              {% for u in regular_users %}
+                <tr class="hover:bg-gray-50 user-row">
+                  <td class="py-2 px-4 border-b">{{ loop.index }}</td>
+                  <td class="py-2 px-4 border-b font-medium username">{{ u.username }}</td>
+                  <td class="py-2 px-4 border-b text-center">
+                    <a href="{{ url_for('admin_user_history', user_id=u.id) }}"
+                       class="text-blue-600 hover:underline">View History</a>
+                    <a href="{{ url_for('delete_user', user_id=u.id) }}"
+                       onclick="return confirm('Are you sure you want to delete this user?')"
+                       class="text-red-600 hover:underline ml-4">Delete</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="text-gray-500 italic">No users found.</p>
+        {% endif %}
+      </div>
     </main>
+
+    <!-- Search Filter Script -->
+    <script>
+      const searchInput = document.getElementById('searchInput');
+      const userRows = document.querySelectorAll('.user-row');
+
+      searchInput.addEventListener('input', () => {
+        const query = searchInput.value.toLowerCase();
+        userRows.forEach(row => {
+          const username = row.querySelector('.username').textContent.toLowerCase();
+          row.style.display = username.includes(query) ? '' : 'none';
+        });
+      });
+    </script>
   </body>
 </html>
