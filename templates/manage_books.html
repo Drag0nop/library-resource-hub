@@ -19,21 +19,27 @@
 
   <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
     <!-- Navbar -->
-    <nav class="bg-indigo-600 text-white py-3 px-6 flex justify-between items-center shadow-lg">
-      <h1 class="font-bold text-xl">
-        <a href="{{ url_for('home') }}" class="hover:text-yellow-300 transition">📚 Library Hub</a>
-      </h1>
-      <div class="space-x-4">
-        {% if current_user.is_authenticated %}
-          {% if current_user.is_admin %}
-            <a href="{{ url_for('admin_dashboard') }}" class="hover:text-yellow-200 transition">Admin</a>
-          {% endif %}
-          <a href="{{ url_for('logout') }}" class="ml-4 bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100 shadow-sm transition">Logout</a>
-        {% else %}
-          <a href="{{ url_for('login') }}" class="bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100 transition">Login</a>
-        {% endif %}
-      </div>
-    </nav>
+<nav class="bg-indigo-600 text-white py-3 px-6 flex justify-between items-center shadow-lg">
+  <h1 class="font-bold text-xl">
+      <a class="hover:text-yellow-300 transition">📚 Library Hub</a>
+  </h1>
+
+  <div class="space-x-4">
+    {% if current_user.is_authenticated %}
+      {% if current_user.is_admin %}
+        <a href="{{ url_for('admin_dashboard') }}" class="hover:text-yellow-200 transition">Admin</a>
+      {% endif %}
+      <a href="{{ url_for('logout') }}" 
+         class="ml-4 bg-white text-indigo-600 px-3 py-1 rounded-md font-medium shadow-sm border border-indigo-200 cursor-pointer select-none">
+         Logout
+      </a>
+    {% else %}
+      <a href="{{ url_for('login') }}" 
+         class="bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100 transition">Login</a>
+    {% endif %}
+  </div>
+</nav>
+
 
     <!-- Flash messages -->
     <div class="container mx-auto mt-4 px-4">
@@ -77,17 +83,37 @@
                 <th class="py-3 px-4 border-b">ID</th>
                 <th class="py-3 px-4 border-b">Title</th>
                 <th class="py-3 px-4 border-b">Author</th>
-                <th class="py-3 px-4 border-b">Available</th>
+                <th class="py-3 px-4 border-b">Category</th> <!-- ✅ Added Category -->
+                <th class="py-3 px-4 border-b text-center">Total Copies</th>
+                <th class="py-3 px-4 border-b text-center">Available</th>
+                <th class="py-3 px-4 border-b text-center">Status</th>
                 <th class="py-3 px-4 border-b text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
               {% for book in books %}
+              {% set borrowed_count = book.borrows|selectattr('returned_at', 'equalto', None)|list|length %}
+              {% set available_copies = book.copies - borrowed_count %}
               <tr class="hover:bg-gray-50 transition">
                 <td class="py-3 px-4 border-b">{{ book.id }}</td>
                 <td class="py-3 px-4 border-b font-medium">{{ book.title }}</td>
                 <td class="py-3 px-4 border-b">{{ book.author }}</td>
-                <td class="py-3 px-4 border-b text-center">{{ book.copies_available }}</td>
+                <td class="py-3 px-4 border-b">{{ book.category or '—' }}</td> <!-- ✅ Category -->
+                <td class="py-3 px-4 border-b text-center">{{ book.copies }}</td>
+                <td class="py-3 px-4 border-b text-center">
+                  {% if available_copies > 0 %}
+                    <span class="text-green-600 font-semibold">{{ available_copies }}</span>
+                  {% else %}
+                    <span class="text-red-500 font-semibold">0</span>
+                  {% endif %}
+                </td>
+                <td class="py-3 px-4 border-b text-center">
+                  {% if available_copies > 0 %}
+                    <span class="bg-green-100 text-green-700 px-2 py-1 rounded-md text-xs font-medium">Available</span>
+                  {% else %}
+                    <span class="bg-red-100 text-red-700 px-2 py-1 rounded-md text-xs font-medium">Not Available</span>
+                  {% endif %}
+                </td>
                 <td class="py-3 px-4 border-b text-center">
                   <a href="{{ url_for('edit_book', book_id=book.id) }}" 
                      class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded-md shadow-sm transition">
@@ -108,7 +134,7 @@
           </table>
         </div>
         {% else %}
-          <p class="text-gray-600 text-center mt-6">No books found. Add your first book to get started!</p>
+          <p class="text-gray-600 text-center mt-6">No books found!</p>
         {% endif %}
       </div>
     </main>

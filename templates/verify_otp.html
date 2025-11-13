@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Verify OTP | Library Resource Hub</title>
+    <link rel="stylesheet" href="/static/login.css">
+    <style>
+        .otp-input {
+            letter-spacing: 5px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 500;
+        }
+        .resend-otp {
+            text-align: center;
+            margin-top: 10px;
+        }
+        .resend-otp a {
+            font-size: 14px;
+            color: #2563eb;
+            text-decoration: none;
+        }
+        .resend-otp a:hover {
+            text-decoration: underline;
+        }
+        .back-to-login {
+            text-align: center;
+            margin-top: 15px;
+        }
+        .back-to-login a {
+            font-size: 14px;
+            color: #2563eb;
+            text-decoration: none;
+        }
+        .back-to-login a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<div class="auth-container">
+    <h2>Verify OTP</h2>
+    <p style="text-align:center; color:#555;">
+        Enter the 6-digit OTP sent to <strong>{{ email }}</strong><br>
+        (It will expire in 5 minutes)
+    </p>
+
+    <form method="POST" action="{{ url_for('verify_otp', email=email) }}">
+        <div class="form-group">
+            <label>Enter OTP</label>
+            <input type="text" name="otp" maxlength="6" class="form-control otp-input" placeholder="______" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="margin-top:10px;">Verify OTP</button>
+    </form>
+
+    <div class="resend-otp">
+        <p>Didn’t receive the OTP? <a href="{{ url_for('forgot_password') }}">Resend</a></p>
+    </div>
+
+    <div class="back-to-login">
+        <a href="{{ url_for('login') }}">Back to Login</a>
+    </div>
+</div>
+</body>
+</html>

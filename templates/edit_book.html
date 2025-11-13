@@ -3,29 +3,35 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Library Resource Hub</title>
+    <title>{{ action }} Book | Library Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .fade-out {
+        animation: fadeOut 3s forwards;
+      }
+      @keyframes fadeOut {
+        0% { opacity: 1; }
+        80% { opacity: 1; }
+        100% { opacity: 0; display: none; }
+      }
+    </style>
   </head>
+
   <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
     <!-- Navbar -->
-    <nav class="bg-indigo-600 text-white py-3 px-6 flex justify-between items-center shadow-md">
-      <h1 class="font-semibold text-lg tracking-wide">
-        <a href="{{ url_for('home') }}">📚 Library Hub</a>
+    <nav class="bg-indigo-600 text-white py-3 px-6 flex justify-between items-center shadow-lg">
+      <h1 class="font-bold text-xl">
+          <a class="hover:text-yellow-300 transition">📚 Library Hub</a>
       </h1>
-      <div class="flex items-center space-x-3">
+
+      <div class="space-x-4">
         {% if current_user.is_authenticated %}
-          <!-- <a href="{{ url_for('view_books') }}" class="hover:text-yellow-200 transition">Books</a> -->
-          <!-- <a href="{{ url_for('user_history') }}" class="hover:text-yellow-200 transition">My History</a> -->
           {% if current_user.is_admin %}
-            <a href="{{ url_for('admin_dashboard') }}" class="hover:text-yellow-200 transition">Admin</a>
+            <a href="{{ url_for('admin_dashboard') }}" class="mx-2 hover:text-yellow-200 font-semibold">Admin</a>
           {% endif %}
-          <a href="{{ url_for('logout') }}" class="bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100 transition">
-            Logout
-          </a>
+          <a href="{{ url_for('logout') }}" class="ml-4 bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100">Logout</a>
         {% else %}
-          <a href="{{ url_for('login') }}" class="bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100 transition">
-            Login
-          </a>
+          <a href="{{ url_for('login') }}" class="bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100 transition">Login</a>
         {% endif %}
       </div>
     </nav>
@@ -36,7 +42,7 @@
         {% if messages %}
           <div class="space-y-3">
             {% for cat, msg in messages %}
-              <div class="p-3 rounded-lg text-white text-sm shadow-md 
+              <div class="p-3 rounded-lg text-white text-sm shadow-md
                           {% if cat == 'success' %}bg-green-500
                           {% elif cat == 'danger' %}bg-red-500
                           {% elif cat == 'info' %}bg-blue-500
@@ -55,31 +61,44 @@
         <h2 class="text-2xl font-semibold text-indigo-700 mb-6 text-center">
           {{ action }} Book
         </h2>
+
         <form method="post" class="space-y-5">
+          <!-- Title -->
           <div>
             <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
             <input id="title" name="title" value="{{ book.title if book else '' }}" required
                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2" />
           </div>
 
+          <!-- Author -->
           <div>
             <label for="author" class="block text-sm font-medium text-gray-700">Author</label>
             <input id="author" name="author" value="{{ book.author if book else '' }}"
                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2" />
           </div>
 
+          <!-- ISBN -->
           <div>
             <label for="isbn" class="block text-sm font-medium text-gray-700">ISBN</label>
             <input id="isbn" name="isbn" value="{{ book.isbn if book else '' }}"
                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2" />
           </div>
 
+          <!-- Category -->
+          <div>
+            <label for="category" class="block text-sm font-medium text-gray-700">Category</label>
+            <input id="category" name="category" value="{{ book.category if book else '' }}"
+                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2" />
+          </div>
+
+          <!-- Copies -->
           <div>
             <label for="copies" class="block text-sm font-medium text-gray-700">Copies</label>
             <input id="copies" name="copies" type="number" min="1" value="{{ book.copies if book else 1 }}"
                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2" />
           </div>
 
+          <!-- Submit Button -->
           <button type="submit"
                   class="w-full bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700 transition shadow-sm">
             {{ action }} Book
@@ -87,6 +106,5 @@
         </form>
       </div>
     </main>
-
   </body>
 </html>

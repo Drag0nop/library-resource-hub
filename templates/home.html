@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Home | Library Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .fade-out {
+        animation: fadeOut 3s forwards;
+      }
+      @keyframes fadeOut {
+        0% { opacity: 1; }
+        80% { opacity: 1; }
+        100% { opacity: 0; display: none; }
+      }
+    </style>
+  </head>
+
+  <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
+    <!-- Navbar -->
+    <nav class="bg-indigo-600 text-white py-3 px-6 flex justify-between items-center shadow-lg">
+      <h1 class="font-bold text-xl">
+        <a class="hover:text-yellow-300 transition">📚 Library Hub</a>
+      </h1>
+      <div class="space-x-4">
+        <a href="{{ url_for('user_home') }}" class="hover:text-yellow-200 transition">Home</a>
+        <a href="{{ url_for('view_books') }}" class="hover:text-yellow-200 transition">Books</a>
+        <a href="{{ url_for('user_history') }}" class="hover:text-yellow-200 transition">History</a>
+        <a href="{{ url_for('logout') }}" class="ml-4 bg-white text-indigo-600 px-3 py-1 rounded-md shadow-sm">Logout</a>
+      </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div class="container mx-auto mt-4 px-4">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="space-y-2">
+            {% for cat, msg in messages %}
+              <div class="fade-out p-3 rounded-lg text-white text-center shadow-md 
+                {% if cat == 'success' %}bg-green-500{% elif cat == 'danger' %}bg-red-500{% elif cat == 'info' %}bg-blue-500{% else %}bg-gray-500{% endif %}">
+                {{ msg }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto p-6 flex-grow">
+      <h2 class="text-2xl font-semibold text-indigo-700 mb-6">👋 Welcome, {{ current_user.username }}!</h2>
+
+      <!-- Search Bar -->
+      <div class="mb-6 flex justify-center">
+        <input 
+          id="searchBooks"
+          type="text"
+          placeholder="Search books by title, author, or category..."
+          class="w-full sm:w-1/2 px-4 py-2 border border-gray-300 rounded-md shadow-sm 
+                 focus:ring-2 focus:ring-indigo-400 outline-none"
+        />
+      </div>
+
+      <!-- Recently Added Books -->
+      <section class="mb-10">
+        <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+          🕒 Recently Added Books
+        </h3>
+
+        {% if recent_books %}
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {% for book in recent_books %}
+              {% set borrowed_count = book.borrows | selectattr('returned_at', 'equalto', None) | list | length %}
+              {% set available_copies = book.copies - borrowed_count %}
+        
+              <div class="book-card bg-white border border-gray-200 rounded-xl shadow-md p-4 
+                          hover:shadow-lg transition relative"
+                   data-title="{{ book.title | lower }}"
+                   data-author="{{ book.author | lower }}"
+                   data-category="{{ book.category | lower }}">
+        
+                <!-- 🔴 NOT AVAILABLE Badge -->
+                {% if available_copies <= 0 %}
+                  <span class="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded-md shadow-md">
+                    Not Available
+                  </span>
+                {% endif %}
+        
+                <h4 class="text-lg font-semibold text-indigo-700 truncate">{{ book.title }}</h4>
+                <p class="text-gray-600 text-sm">by {{ book.author or 'Unknown Author' }}</p>
+                <p class="mt-2 text-xs text-gray-500">📅 Added: {{ book.created_at.strftime('%b %d, %Y') }}</p>
+                <p class="mt-1 text-sm text-gray-700">🏷 Category: {{ book.category or 'General' }}</p>
+        
+                <p class="mt-2 text-sm">
+                  <span class="font-medium">Available:</span>
+                  {% if available_copies > 0 %}
+                    <span class="text-green-600 font-semibold">{{ available_copies }}</span>
+                  {% else %}
+                    <span class="text-red-600 font-semibold">0</span>
+                  {% endif %}
+                </p>
+        
+                <form action="{{ url_for('borrow_book', book_id=book.id) }}" method="post" class="mt-3">
+                  <button type="submit"
+                    {% if available_copies <= 0 %}disabled{% endif %}
+                    class="w-full text-white py-1.5 rounded-md text-sm transition
+                      {% if available_copies > 0 %}
+                        bg-indigo-600 hover:bg-indigo-700
+                      {% else %}
+                        bg-gray-400 cursor-not-allowed
+                      {% endif %}">
+                    Borrow
+                  </button>
+                </form>
+        
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-gray-500 italic">No new books added recently.</p>
+        {% endif %}
+      </section>
+
+      <!-- Recommended Books -->
+      <section>
+        <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+          💡 Recommended For You
+        </h3>
+
+        {% if recommended_books %}
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {% for book in recommended_books %}
+              {% set borrowed_count = book.borrows | selectattr('returned_at', 'equalto', None) | list | length %}
+              {% set available_copies = book.copies - borrowed_count %}
+        
+              <div class="book-card bg-white border border-gray-200 rounded-xl shadow-md p-4 
+                          hover:shadow-lg transition relative"
+                   data-title="{{ book.title | lower }}"
+                   data-author="{{ book.author | lower }}"
+                   data-category="{{ book.category | lower }}">
+        
+                <!-- 🔴 NOT AVAILABLE Badge -->
+                {% if available_copies <= 0 %}
+                  <span class="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded-md shadow-md">
+                    Not Available
+                  </span>
+                {% endif %}
+        
+                <h4 class="text-lg font-semibold text-indigo-700 truncate">{{ book.title }}</h4>
+                <p class="text-gray-600 text-sm">by {{ book.author or 'Unknown Author' }}</p>
+                <p class="mt-1 text-sm text-gray-700">🏷 Category: {{ book.category or 'General' }}</p>
+        
+                <p class="mt-2 text-sm">
+                  <span class="font-medium">Available:</span>
+                  {% if available_copies > 0 %}
+                    <span class="text-green-600 font-semibold">{{ available_copies }}</span>
+                  {% else %}
+                    <span class="text-red-600 font-semibold">0</span>
+                  {% endif %}
+                </p>
+        
+                <form action="{{ url_for('borrow_book', book_id=book.id) }}" method="post" class="mt-3">
+                  <button type="submit"
+                    {% if available_copies <= 0 %}disabled{% endif %}
+                    class="w-full text-white py-1.5 rounded-md text-sm transition
+                      {% if available_copies > 0 %}
+                        bg-green-600 hover:bg-green-700
+                      {% else %}
+                        bg-gray-400 cursor-not-allowed
+                      {% endif %}">
+                    Borrow
+                  </button>
+                </form>
+        
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-gray-500 italic">No recommendations yet. Borrow some books to get personalized suggestions!</p>
+        {% endif %}
+
+      </section>
+    </main>
+
+    <!-- Search Filter Script -->
+    <script>
+      const searchBooks = document.getElementById("searchBooks");
+      const cards = document.querySelectorAll(".book-card");
+
+      searchBooks.addEventListener("input", () => {
+        let text = searchBooks.value.toLowerCase();
+
+        cards.forEach(card => {
+          let title = card.dataset.title;
+          let author = card.dataset.author;
+          let category = card.dataset.category;
+
+          let match =
+            title.includes(text) ||
+            author.includes(text) ||
+            category.includes(text);
+
+          card.style.display = match ? "" : "none";
+        });
+      });
+    </script>
+
+  </body>
+</html>

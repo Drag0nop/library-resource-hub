@@ -5,32 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Library Resource Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .fade-out {
+        animation: fadeOut 3s forwards;
+      }
+      @keyframes fadeOut {
+        0% { opacity: 1; }
+        80% { opacity: 1; }
+        100% { opacity: 0; display: none; }
+      }
+    </style>
   </head>
-  <body class="bg-gray-50 text-gray-800">
-    <!-- Navbar -->
-    <nav class="bg-indigo-600 text-white py-3 px-6 flex justify-between items-center shadow-md">
-      <h1 class="font-semibold text-lg"><a href="{{ url_for('home') }}">📚 Library Hub</a></h1>
-      <div>
+
+  <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
+    <nav class="bg-indigo-600 text-white py-3 px-6 flex justify-between items-center shadow-lg">
+      <h1 class="font-bold text-xl">
         {% if current_user.is_authenticated %}
-          <!-- <a href="{{ url_for('view_books') }}" class="mx-2 hover:text-yellow-200">Books</a> -->
-          <a href="{{ url_for('user_history') }}" class="mx-2 hover:text-yellow-200">My History</a>
           {% if current_user.is_admin %}
-            <a href="{{ url_for('admin_dashboard') }}" class="mx-2 hover:text-yellow-200">Admin</a>
+            <a href="{{ url_for('admin_dashboard') }}" class="hover:text-yellow-300">📚 Library Hub</a>
+          {% else %}
+            <a class="hover:text-yellow-300">📚 Library Hub</a>
           {% endif %}
-          <a href="{{ url_for('logout') }}" class="ml-4 bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100">Logout</a>
         {% else %}
-          <a href="{{ url_for('login') }}" class="bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100">Login</a>
+          <a href="{{ url_for('login') }}" class="hover:text-yellow-300">📚 Library Hub</a>
+        {% endif %}
+      </h1>
+
+      <div class="space-x-4">
+        {% if current_user.is_authenticated %}
+          <a href="{{ url_for('user_home') }}" class="hover:text-yellow-200">Home</a>
+          <a href="{{ url_for('view_books') }}" class="hover:text-yellow-200">Books</a>
+          <a href="{{ url_for('user_history') }}" class="hover:text-yellow-200">History</a>
+
+          {% if current_user.is_admin %}
+            <a href="{{ url_for('admin_dashboard') }}" class="hover:text-yellow-200">Admin</a>
+          {% endif %}
+
+          <a href="{{ url_for('logout') }}" class="bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100">
+            Logout
+          </a>
+        {% else %}
+          <a href="{{ url_for('login') }}" class="bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100">
+            Login
+          </a>
         {% endif %}
       </div>
     </nav>
 
-    <!-- Flash messages -->
+    <!-- Flash Messages -->
     <div class="container mx-auto mt-4 px-4">
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-          <div class="space-y-2">
+          <div class="space-y-3">
             {% for cat, msg in messages %}
-              <div class="p-3 rounded-lg text-white {% if cat == 'success' %}bg-green-500{% elif cat == 'danger' %}bg-red-500{% elif cat == 'info' %}bg-blue-500{% else %}bg-gray-500{% endif %}">
+              <div class="fade-out p-3 rounded-lg text-white text-sm shadow-md
+                {% if cat == 'success' %}bg-green-500
+                {% elif cat == 'danger' %}bg-red-500
+                {% elif cat == 'info' %}bg-blue-500
+                {% else %}bg-gray-500{% endif %}">
                 {{ msg }}
               </div>
             {% endfor %}
@@ -39,23 +71,168 @@
       {% endwith %}
     </div>
 
-    <main class="container mx-auto p-6">
-      <!-- {% block content %}{% endblock %} -->
-      <h2 class="text-2xl font-semibold mb-4">Available Books</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {% for b in books %}
-        <div class="bg-white rounded-lg shadow p-5 flex flex-col justify-between">
-          <div>
-            <h3 class="text-lg font-semibold">{{ b.title }}</h3>
-            <p class="text-sm text-gray-600">by {{ b.author }}</p>
-            <p class="text-xs text-gray-400 mt-1">ISBN: {{ b.isbn }}</p>
-          </div>
-          <form action="{{ url_for('borrow_book', book_id=b.id) }}" method="post" class="mt-4">
-            <button type="submit" class="w-full bg-indigo-600 text-white py-1.5 rounded hover:bg-indigo-700">Borrow</button>
-          </form>
-        </div>
-        {% endfor %}
+    <main class="container mx-auto p-6 flex-grow">
+      <!-- <h2 class="text-2xl font-semibold mb-6 text-center text-indigo-700">📚 Available Books</h2> -->
+      <!-- Search + Filter Row -->
+      <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+        <!-- Search Bar -->
+        <input id="searchBar" type="text" placeholder="Search by title, author, category..." class="w-full sm:w-1/2 px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-indigo-400"/>
+        <!-- Filter Dropdown -->
+        <select id="filterSelect" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-indigo-400">
+          <option value="all">All Books</option>
+          <option value="available">Available Only</option>
+          <option value="not_available">Not Available Only</option>
+        </select>
       </div>
+
+      {% if books %}
+        <div id="booksGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {% for b in books %}
+            {% set borrowed_count = b.borrows|selectattr('returned_at','equalto',None)|list|length %}
+            {% set available_copies = b.copies - borrowed_count %}
+
+            <div class="book-card bg-white rounded-lg shadow-md p-5 flex flex-col justify-between border hover:shadow-lg transition relative"
+                 data-title="{{ b.title | lower }}"
+                 data-author="{{ b.author | lower }}"
+                 data-category="{{ b.category | lower }}"
+                 data-status="{% if available_copies > 0 %}available{% else %}not_available{% endif %}">
+
+              {% if available_copies <= 0 %}
+                <span class="absolute top-2 right-2 bg-red-600 text-white text-xs px-2 py-1 rounded-md">
+                  Not Available
+                </span>
+              {% endif %}
+
+              <div>
+                <h3 class="text-lg font-semibold text-indigo-700">{{ b.title }}</h3>
+                <p class="text-sm text-gray-600 mt-1">by {{ b.author }}</p>
+                <p class="text-xs text-gray-400">ISBN: {{ b.isbn }}</p>
+
+                {% if b.category %}
+                  <p class="text-xs text-gray-500">Category: {{ b.category }}</p>
+                {% endif %}
+
+                <div class="mt-3 text-sm">
+                  <p><b>Total Copies:</b> {{ b.copies }}</p>
+
+                  {% if available_copies > 0 %}
+                    <p class="text-green-600 font-semibold">Available ({{ available_copies }} left)</p>
+                  {% else %}
+                    <p class="text-red-500 font-semibold">Not Available</p>
+                  {% endif %}
+                </div>
+              </div>
+
+              <form action="{{ url_for('borrow_book', book_id=b.id) }}" method="post" class="mt-5">
+                <button type="submit"
+                  {% if available_copies <= 0 %}disabled{% endif %}
+                  class="w-full py-2 rounded-md text-white font-medium
+                         {% if available_copies > 0 %}bg-indigo-600 hover:bg-indigo-700
+                         {% else %}bg-gray-400 cursor-not-allowed{% endif %}">
+                  Borrow
+                </button>
+              </form>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-center text-gray-600 italic mt-10">No books available right now.</p>
+      {% endif %}
+      <!-- Pagination Controls -->
+      <div id="paginationControls" class="flex justify-center space-x-2 mt-8"></div>
     </main>
+
+    <!-- JS for Search + Filter -->
+    <script>
+      const searchBar = document.getElementById("searchBar");
+      const filterSelect = document.getElementById("filterSelect");
+      const cards = Array.from(document.querySelectorAll(".book-card"));
+      const pagination = document.getElementById("paginationControls");
+    
+      let filteredCards = [...cards];
+      let currentPage = 1;
+      const itemsPerPage = 9; // You can increase/decrease
+      // Apply Search + Filter
+      function applyFilters() {
+        const searchText = searchBar.value.toLowerCase();
+        const filterValue = filterSelect.value;
+    
+        filteredCards = cards.filter(card => {
+          const matchesText =
+            card.dataset.title.includes(searchText) ||
+            card.dataset.author.includes(searchText) ||
+            card.dataset.category.includes(searchText);
+    
+          const matchesFilter =
+            filterValue === "all" ||
+            (filterValue === "available" && card.dataset.status === "available") ||
+            (filterValue === "not_available" && card.dataset.status === "not_available");
+    
+          return matchesText && matchesFilter;
+        });
+        currentPage = 1;
+        renderList();
+      }
+      // Render Pagination
+      function renderPagination() {
+        pagination.innerHTML = "";
+        const totalPages = Math.ceil(filteredCards.length / itemsPerPage);
+    
+        if (totalPages <= 1) return;
+    
+        // Prev Button
+        const prev = document.createElement("button");
+        prev.textContent = "←";
+        prev.className = "px-3 py-1 bg-gray-200 rounded hover:bg-gray-300";
+        prev.disabled = currentPage === 1;
+        prev.onclick = () => { currentPage--; renderList(); };
+        pagination.appendChild(prev);
+    
+        // Page Numbers
+        for (let i = 1; i <= totalPages; i++) {
+          const btn = document.createElement("button");
+          btn.textContent = i;
+          btn.className =
+            "px-3 py-1 rounded " +
+            (i === currentPage
+              ? "bg-indigo-600 text-white"
+              : "bg-gray-200 hover:bg-gray-300");
+          btn.onclick = () => {
+            currentPage = i;
+            renderList();
+          };
+          pagination.appendChild(btn);
+        }
+    
+        // Next Button
+        const next = document.createElement("button");
+        next.textContent = "→";
+        next.className = "px-3 py-1 bg-gray-200 rounded hover:bg-gray-300";
+        next.disabled = currentPage === totalPages;
+        next.onclick = () => { currentPage++; renderList(); };
+        pagination.appendChild(next);
+      }
+    
+      // -----------------------
+      // Render Books
+      // -----------------------
+      function renderList() {
+        cards.forEach(card => (card.style.display = "none"));
+    
+        const start = (currentPage - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+    
+        filteredCards.slice(start, end).forEach(card => (card.style.display = ""));
+    
+        renderPagination();
+      }
+    
+      // Event Listeners
+      searchBar.addEventListener("input", applyFilters);
+      filterSelect.addEventListener("change", applyFilters);
+    
+      // Initial Load
+      applyFilters();
+    </script>
   </body>
 </html>

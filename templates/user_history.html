@@ -3,36 +3,63 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Library Resource Hub</title>
+    <title>Borrowing History | Library Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- ✅ Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      .fade-out {
+        animation: fadeOut 3s forwards;
+      }
+      @keyframes fadeOut {
+        0% { opacity: 1; }
+        80% { opacity: 1; }
+        100% { opacity: 0; display: none; }
+      }
+    </style>
+
   </head>
-  <body class="bg-gray-50 text-gray-800">
+
+  <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
     <!-- Navbar -->
-    <nav class="bg-indigo-600 text-white py-3 px-6 flex justify-between items-center shadow-md">
-      <h1 class="font-semibold text-lg"><a href="{{ url_for('home') }}">📚 Library Hub</a></h1>
-      <div>
+    <nav class="bg-indigo-600 text-white py-3 px-6 flex justify-between items-center shadow-lg">
+      <h1 class="font-bold text-xl">
+          <a class="hover:text-yellow-300 transition">📚 Library Hub</a>
+      </h1>
+
+      <div class="space-x-4">
         {% if current_user.is_authenticated %}
-          {% if not current_user.is_admin %}
-            <a href="{{ url_for('view_books') }}" class="mx-2 hover:text-yellow-200">Books</a>
-          {% endif %}
-          <!-- <a href="{{ url_for('user_history') }}" class="mx-2 hover:text-yellow-200">My History</a> -->
+          
           {% if current_user.is_admin %}
-            <a href="{{ url_for('admin_dashboard') }}" class="mx-2 hover:text-yellow-200">Admin</a>
+            <!-- Admin sees only Admin Dashboard + Logout -->
+            <a href="{{ url_for('admin_dashboard') }}" class="hover:text-yellow-200 transition">Admin</a>
+            <a href="{{ url_for('logout') }}" class="bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100 transition">Logout</a>
+          
+          {% else %}
+            <!-- Normal user sees Home, Books, History + Logout -->
+            <a href="{{ url_for('user_home') }}" class="hover:text-yellow-200 transition">Home</a>
+            <a href="{{ url_for('view_books') }}" class="hover:text-yellow-200 transition">Books</a>
+            <a href="{{ url_for('user_history') }}" class="hover:text-yellow-200 transition">History</a>
+            <a href="{{ url_for('logout') }}" class="bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100 transition">Logout</a>
           {% endif %}
-          <a href="{{ url_for('logout') }}" class="ml-4 bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100">Logout</a>
-        {% else %}
-          <a href="{{ url_for('login') }}" class="bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100">Login</a>
+          {% else %}
+          <!-- Not logged in -->
+          <a href="{{ url_for('login') }}" class="bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100 transition">Login</a>
         {% endif %}
       </div>
     </nav>
 
-    <!-- Flash messages -->
+    <!-- Flash Messages -->
     <div class="container mx-auto mt-4 px-4">
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           <div class="space-y-2">
             {% for cat, msg in messages %}
-              <div class="p-3 rounded-lg text-white {% if cat == 'success' %}bg-green-500{% elif cat == 'danger' %}bg-red-500{% elif cat == 'info' %}bg-blue-500{% else %}bg-gray-500{% endif %}">
+              <div class="fade-out p-3 rounded-lg text-white text-center shadow-md
+                {% if cat == 'success' %}bg-green-500
+                {% elif cat == 'danger' %}bg-red-500
+                {% elif cat == 'info' %}bg-blue-500
+                {% else %}bg-gray-500{% endif %}">
                 {{ msg }}
               </div>
             {% endfor %}
@@ -41,37 +68,253 @@
       {% endwith %}
     </div>
 
-    <main class="container mx-auto p-6">
-      <!-- {% block content %}{% endblock %} -->
-      <h2 class="text-2xl font-semibold mb-4">Borrowing History</h2>
-      <div class="bg-white shadow rounded-lg p-6">
-        <table class="w-full text-left border-collapse">
+
+    <!-- Main Content -->
+    <main class="container mx-auto p-6 flex-grow">
+      <div class="flex justify-between items-center mb-6 flex-wrap gap-3">
+        <h2 class="text-2xl font-semibold text-indigo-700">
+          {% if current_user.is_admin and user %}
+            📖 Borrowing History for {{ user.username }}
+          {% else %}
+            📖 Your Borrowing History
+          {% endif %}
+        </h2>
+
+        <!-- Filter Dropdown -->
+        <div>
+          <label for="filter" class="mr-2 font-medium text-gray-700">Filter:</label>
+          <select id="filter" class="border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-400 outline-none transition">
+            <option value="all">All</option>
+            <option value="borrowed">Borrowed Books</option>
+            <option value="returned">Returned Books</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Borrow History Table -->
+      <div class="bg-white shadow rounded-lg p-6 mb-10 overflow-x-auto">
+        <table class="w-full text-left border-collapse" id="historyTable">
           <thead>
-            <tr class="border-b">
+            <tr class="border-b text-indigo-700">
               <th class="py-2">Book</th>
               <th>Borrowed</th>
+              <th>Due Date</th>
               <th>Status</th>
+              <th>Late Fee</th>
             </tr>
           </thead>
           <tbody>
-            {% for r in borrows %}
-            <tr class="border-b hover:bg-gray-50">
+          {% for r in borrows %}
+            <tr class="border-b hover:bg-gray-50 transition {% if r.returned_at %}returned{% else %}borrowed{% endif %}">
+        
+              <!-- Book Title -->
               <td class="py-2 font-medium">{{ r.book.title }}</td>
+        
+              <!-- Borrowed Date -->
               <td>{{ r.borrowed_at.strftime('%Y-%m-%d') }}</td>
+        
+              <!-- Due Date -->
+              <td>
+                {{ r.due_date.strftime('%Y-%m-%d') if r.due_date else '-' }}
+              </td>
+        
+              <!-- Status -->
               <td>
                 {% if r.returned_at %}
-                  <span class="text-green-600">Returned</span>
+                  <span class="text-green-600 font-semibold">Returned</span>
                 {% else %}
-                  <form action="{{ url_for('return_book', borrow_id=r.id) }}" method="post">
-                    <button class="text-indigo-600 hover:underline">Return</button>
-                  </form>
+                  {% if not current_user.is_admin %}
+                    <!-- User can return books -->
+                    <form action="{{ url_for('return_book', borrow_id=r.id) }}" method="post" class="inline">
+                      <button class="text-indigo-600 hover:underline">Return</button>
+                    </form>
+                  {% else %}
+                    <!-- Admin cannot return -->
+                    <span class="text-red-600 font-semibold">Borrowed</span>
+                  {% endif %}
                 {% endif %}
               </td>
+        
+              <!-- Late Fee -->
+              <td>
+                {% if r.late_fee > 0 %}
+                  <span class="text-red-600 font-semibold">₹{{ r.late_fee }}</span>
+                {% else %}
+                  <span class="text-gray-500">-</span>
+                {% endif %}
+              </td>
+        
             </tr>
-            {% endfor %}
-          </tbody>
+        
+          {% else %}
+            <tr>
+              <td colspan="5" class="py-3 text-center text-gray-500 italic">
+                No borrowing records found.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
         </table>
       </div>
+      
+      <!-- Pagination Controls -->
+      <div id="historyPagination" class="flex justify-center space-x-2 mt-6"></div>
+      
+      <!-- ✅ Category Analysis (Admin Only) -->
+      {% if current_user.is_admin and categories %}
+      <div class="bg-white shadow-lg rounded-lg p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-semibold text-indigo-700">📊 Category Analysis</h3>
+
+          <div>
+            <label for="days" class="mr-2 text-gray-700">Timeframe:</label>
+            <select id="days" class="border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-400 outline-none transition">
+              <option value="7" {% if selected_days == 7 %}selected{% endif %}>Last 7 Days</option>
+              <option value="30" {% if selected_days == 30 %}selected{% endif %}>Last 30 Days</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- ✅ Embed data attributes for AJAX updates -->
+        <canvas 
+          id="categoryChart" 
+          height="120"
+          data-labels='{{ categories | tojson }}'
+          data-data='{{ counts | tojson }}'>
+        </canvas>
+
+        <p class="text-sm text-gray-500 mt-2 text-center">
+          Showing borrow data for the past {{ selected_days }} days.
+        </p>
+      </div>
+      {% endif %}
     </main>
+
+    <!-- JS -->
+    <script>
+      const filterSelect = document.getElementById("filter");
+      const rows = Array.from(document.querySelectorAll("#historyTable tbody tr"));
+      const pagination = document.getElementById("historyPagination");
+
+      let filteredRows = [...rows];
+      let currentPage = 1;
+      const rowsPerPage = 10;
+
+      function applyFilter() {
+        const filter = filterSelect.value;
+        filteredRows = rows.filter(row => {
+          return filter === "all" ||
+                 (filter === "borrowed" && row.classList.contains("borrowed")) ||
+                 (filter === "returned" && row.classList.contains("returned"));
+        });
+        currentPage = 1;
+        renderRows();
+      }
+    
+      filterSelect.addEventListener("change", applyFilter);
+      function renderPagination() {
+        pagination.innerHTML = "";
+        const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+    
+        if (totalPages <= 1) return;
+
+        // Prev Button
+        const prevBtn = document.createElement("button");
+        prevBtn.textContent = "←";
+        prevBtn.className = "px-3 py-1 bg-gray-200 rounded hover:bg-gray-300";
+        prevBtn.disabled = currentPage === 1;
+        prevBtn.onclick = () => { currentPage--; renderRows(); };
+        pagination.appendChild(prevBtn);
+    
+        // Page Numbers
+        for (let i = 1; i <= totalPages; i++) {
+          const btn = document.createElement("button");
+          btn.textContent = i;
+          btn.className =
+            "px-3 py-1 rounded " +
+            (i === currentPage
+              ? "bg-indigo-600 text-white"
+              : "bg-gray-200 hover:bg-gray-300");
+          btn.onclick = () => { currentPage = i; renderRows(); };
+          pagination.appendChild(btn);
+        }
+    
+        // Next Button
+        const nextBtn = document.createElement("button");
+        nextBtn.textContent = "→";
+        nextBtn.className = "px-3 py-1 bg-gray-200 rounded hover:bg-gray-300";
+        nextBtn.disabled = currentPage === totalPages;
+        nextBtn.onclick = () => { currentPage++; renderRows(); };
+        pagination.appendChild(nextBtn);
+      }
+
+      function renderRows() {
+        // Hide all rows
+        rows.forEach(r => (r.style.display = "none"));
+    
+        // Determine which rows to show
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+    
+        filteredRows.slice(start, end).forEach(r => {
+          r.style.display = "";
+        });
+    
+        renderPagination();
+      }
+    
+      // Initial Load
+      applyFilter();
+    
+    
+      // ----------------------------------------------------
+      // ADMIN CHART CODE (unchanged)
+      // ----------------------------------------------------
+      {% if current_user.is_admin and categories %}
+      const canvas = document.getElementById("categoryChart");
+      const ctx = canvas.getContext("2d");
+    
+      let categoryChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: JSON.parse(canvas.getAttribute("data-labels")),
+          datasets: [{
+            label: "Books Borrowed ({{ selected_days }} days)",
+            data: JSON.parse(canvas.getAttribute("data-data")),
+            backgroundColor: "rgba(79, 70, 229, 0.7)",
+            borderColor: "rgba(79, 70, 229, 1)",
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+          animation: {
+            duration: 800,
+            easing: 'easeInOutQuad'
+          }
+        }
+      });
+    
+      const daysSelect = document.getElementById("days");
+      daysSelect.addEventListener("change", async () => {
+        const days = daysSelect.value;
+        const baseUrl = window.location.pathname;
+        const response = await fetch(`${baseUrl}?days=${days}`);
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+    
+        const newCanvas = doc.querySelector("#categoryChart");
+        const newLabels = JSON.parse(newCanvas.getAttribute("data-labels") || "[]");
+        const newData = JSON.parse(newCanvas.getAttribute("data-data") || "[]");
+    
+        categoryChart.data.labels = newLabels;
+        categoryChart.data.datasets[0].data = newData;
+        categoryChart.data.datasets[0].label = `Books Borrowed (${days} days)`;
+        categoryChart.update();
+      });
+      {% endif %}
+    </script>
   </body>
 </html>

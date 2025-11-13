@@ -7,31 +7,26 @@
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
 
-  <body class="bg-gray-50 text-gray-800">
-    <!-- Navbar -->
-    <nav class="bg-indigo-600 text-white py-3 px-6 flex justify-between items-center shadow-md">
-      <h1 class="font-semibold text-lg">
-        <a href="{{ url_for('home') }}">📚 Library Hub</a>
-      </h1>
-      <div>
-        {% if current_user.is_authenticated %}
-          <!-- <a href="{{ url_for('view_books') }}" class="mx-2 hover:text-yellow-200">Books</a>
-          <a href="{{ url_for('user_history') }}" class="mx-2 hover:text-yellow-200">My History</a>
-          {% if current_user.is_admin %} -->
-            <a href="{{ url_for('admin_dashboard') }}" class="mx-2 hover:text-yellow-200 font-semibold underline">Admin</a>
-          {% endif %}
-          <a href="{{ url_for('logout') }}" class="ml-4 bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100">Logout</a>
-        {% endif %}
+  <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
+    <nav class="bg-indigo-600 text-white py-3 px-6 flex justify-between items-center shadow-lg">
+      <h1 class="font-bold text-xl">📚 Library Hub</h1>
+      <div class="space-x-4">
+        <a href="{{ url_for('admin_dashboard') }}" class="hover:text-yellow-200">Admin</a>
+        <a href="{{ url_for('logout') }}" class="bg-white text-indigo-600 px-3 py-1 rounded-md hover:bg-gray-100">Logout</a>
       </div>
     </nav>
 
-    <!-- Flash messages -->
+    <!-- Flash Messages -->
     <div class="container mx-auto mt-4 px-4">
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           <div class="space-y-2">
             {% for cat, msg in messages %}
-              <div class="p-3 rounded-lg text-white {% if cat == 'success' %}bg-green-500{% elif cat == 'danger' %}bg-red-500{% elif cat == 'info' %}bg-blue-500{% else %}bg-gray-500{% endif %}">
+              <div class="p-3 rounded-lg text-white
+                {% if cat == 'success' %}bg-green-500
+                {% elif cat == 'danger' %}bg-red-500
+                {% elif cat == 'info' %}bg-blue-500
+                {% else %}bg-gray-500{% endif %}">
                 {{ msg }}
               </div>
             {% endfor %}
@@ -40,68 +35,170 @@
       {% endwith %}
     </div>
 
-    <!-- Main Content -->
     <main class="container mx-auto p-6">
-      <h2 class="text-3xl font-semibold mb-6">📊 Admin Dashboard</h2>
+      <h2 class="text-3xl font-semibold mb-6">📊 Dashboard</h2>
 
       <!-- Stats Cards -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-white p-6 rounded-lg shadow flex items-center justify-between border-l-4 border-indigo-500">
-          <div>
-            <h3 class="text-sm text-gray-500">Total Books</h3>
-            <p class="text-3xl font-semibold text-gray-800">{{ total_books }}</p>
-          </div>
-          <span class="text-indigo-500 text-4xl">📚</span>
+        <div class="bg-white p-6 rounded-lg shadow border-l-4 border-indigo-500">
+          <h3 class="text-sm text-gray-500">Total Books</h3>
+          <p class="text-3xl font-bold">{{ total_books }}</p>
         </div>
-        <div class="bg-white p-6 rounded-lg shadow flex items-center justify-between border-l-4 border-red-500">
-          <div>
-            <h3 class="text-sm text-gray-500">Borrowed Books</h3>
-            <p class="text-3xl font-semibold text-gray-800">{{ borrowed_books }}</p>
-          </div>
-          <span class="text-red-500 text-4xl">📕</span>
+
+        <div class="bg-white p-6 rounded-lg shadow border-l-4 border-red-500">
+          <h3 class="text-sm text-gray-500">Borrowed Books</h3>
+          <p class="text-3xl font-bold">{{ borrowed_books }}</p>
         </div>
-        <div class="bg-white p-6 rounded-lg shadow flex items-center justify-between border-l-4 border-green-500">
-          <div>
-            <h3 class="text-sm text-gray-500">Available Books</h3>
-            <p class="text-3xl font-semibold text-gray-800">{{ available_books }}</p>
-          </div>
-          <span class="text-green-500 text-4xl">📗</span>
+
+        <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
+          <h3 class="text-sm text-gray-500">Available Books</h3>
+          <p class="text-3xl font-bold">{{ available_books }}</p>
         </div>
       </div>
 
       <!-- Management Panels -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+
+        <!-- Books -->
         <div class="bg-white p-6 rounded-lg shadow">
-          <h3 class="text-xl font-medium mb-2">📚 Books</h3>
-          <p class="text-gray-500 mb-3">Add, edit, or remove books from the library collection.</p>
-          <a href="{{ url_for('manage_books') }}" class="text-indigo-600 hover:underline font-semibold">Manage Books →</a>
+          <h3 class="text-xl mb-2">📚 Books</h3>
+          <p class="text-gray-500 mb-3">Add, edit, or remove books</p>
+          <a href="{{ url_for('manage_books') }}" class="text-indigo-600 font-semibold hover:underline">Manage Books →</a>
         </div>
 
+        <!-- Users -->
         <div class="bg-white p-6 rounded-lg shadow">
-          <h3 class="text-xl font-medium mb-2">👥 Users</h3>
-          <p class="text-gray-500 mb-3">Create or manage registered users.</p>
-          <a href="{{ url_for('manage_users') }}" class="text-indigo-600 hover:underline font-semibold">Manage Users →</a>
+          <h3 class="text-xl mb-2">👥 Users</h3>
+          <p class="text-gray-500 mb-3">Manage user accounts</p>
+          <a href="{{ url_for('manage_users') }}" class="text-indigo-600 font-semibold hover:underline">Manage Users →</a>
         </div>
 
+        <!-- Recent Borrows -->
         <div class="bg-white p-6 rounded-lg shadow">
           <h3 class="text-xl font-medium mb-4">🕒 Recent Borrows</h3>
-          <ul class="text-sm space-y-2">
-            {% for b in borrows[:5] %}
-              <li class="border-b pb-1">
-                📖 <b>{{ b.book.title }}</b> 
+          <!-- Download Button -->
+          <a href="{{ url_for('download_recent_borrows') }}"
+             class="mb-3 inline-block text-indigo-600 hover:text-indigo-800 text-xl">
+            Download File --> ⬇
+          </a>
+          <!-- Filter -->
+          <select id="borrowFilter" 
+                  class="mb-3 px-3 py-2 border border-gray-300 rounded-md shadow-sm w-full">
+            <option value="all">All</option>
+            <option value="borrowed">Not Returned</option>
+            <option value="returned">Returned</option>
+          </select>
+        
+          <!-- Borrow List -->
+          <ul id="borrowList" class="text-sm space-y-2">
+            {% for b in borrows %}
+              <li class="borrow-item border-b pb-1"
+                  data-status="{% if b.returned_at %}returned{% else %}borrowed{% endif %}">
+                📖 <b>{{ b.book.title }}</b>
                 <span class="text-gray-600">by {{ b.user.username }}</span>
+        
                 {% if not b.returned_at %}
                   <span class="text-red-500">(Not returned)</span>
                 {% else %}
                   <span class="text-green-500">(Returned)</span>
                 {% endif %}
               </li>
-            {% else %}
-              <li class="text-gray-500 italic">No recent borrow records.</li>
             {% endfor %}
           </ul>
-        </div>
+        
+          <!-- Pagination -->
+          <div id="paginationControls" class="flex justify-center items-center mt-4 space-x-2">
+            <!-- Injected by JS -->
+          </div>
       </div>
+
     </main>
+
+    <!-- JS for Expand + Filter -->
+    <script>
+      const borrowList = document.getElementById("borrowList");
+      const filter = document.getElementById("borrowFilter");
+      const items = [...document.querySelectorAll(".borrow-item")];
+      const pagination = document.getElementById("paginationControls");
+    
+      let currentPage = 1;
+      const itemsPerPage = 10;
+      let filteredItems = [...items];
+    
+      // -------------------------------
+      // PAGINATION UI
+      // -------------------------------
+      function renderPagination() {
+        pagination.innerHTML = "";
+    
+        const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+        if (totalPages <= 1) return;
+    
+        // Prev Button
+        const prevBtn = document.createElement("button");
+        prevBtn.textContent = "←";
+        prevBtn.className = "px-2 py-1 bg-gray-200 rounded hover:bg-gray-300";
+        prevBtn.disabled = currentPage === 1;
+        prevBtn.onclick = () => { currentPage--; renderList(); };
+        pagination.appendChild(prevBtn);
+    
+        // Page Buttons
+        for (let i = 1; i <= totalPages; i++) {
+          const btn = document.createElement("button");
+          btn.textContent = i;
+          btn.className =
+            "px-3 py-1 rounded mx-1 " +
+            (i === currentPage
+              ? "bg-indigo-600 text-white"
+              : "bg-gray-200 hover:bg-gray-300");
+          btn.onclick = () => { currentPage = i; renderList(); };
+          pagination.appendChild(btn);
+        }
+    
+        // Next Button
+        const nextBtn = document.createElement("button");
+        nextBtn.textContent = "→";
+        nextBtn.className = "px-2 py-1 bg-gray-200 rounded hover:bg-gray-300";
+        nextBtn.disabled = currentPage === totalPages;
+        nextBtn.onclick = () => { currentPage++; renderList(); };
+        pagination.appendChild(nextBtn);
+      }
+    
+      // -------------------------------
+      // RENDER ITEMS
+      // -------------------------------
+      function renderList() {
+        items.forEach(item => (item.style.display = "none"));
+    
+        const start = (currentPage - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+    
+        filteredItems.slice(start, end).forEach(item => {
+          item.style.display = "";
+        });
+    
+        renderPagination();
+      }
+    
+      // -------------------------------
+      // FILTER ITEMS
+      // -------------------------------
+      function applyFilter() {
+        const val = filter.value;
+    
+        filteredItems = items.filter(item => {
+          const status = item.dataset.status;
+          return val === "all" || val === status;
+        });
+    
+        currentPage = 1;
+        renderList();
+      }
+    
+      filter.addEventListener("change", applyFilter);
+    
+      // Initial Load
+      applyFilter();
+    </script>
   </body>
 </html>
