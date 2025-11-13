@@ -10,104 +10,119 @@ The system supports **User Authentication**, **book borrowing**, **return tracki
 - View all available books with search and advanced filtering  
 - Borrow books with automatic **due date assignment (14 days)**  
 - Return borrowed books  
-- View full **borrowing history** with due dates and penalties
-- See book availability in real time  
+- View full **borrowing history**  
+- See real-time book availability  
 - Personalized **recommended books**  
 
 ---
 
 ### 🛠️ **For Admin**
-- Admin dashboard with:
+- Dashboard showing:
   - Total Books  
   - Borrowed Books  
   - Available Books  
-- Manage Books (Add, Edit, Delete)  
+- Manage Books (Add / Edit / Delete)  
 - Manage Users  
-- View recent borrows with:  
-  - Download CSV for recent borrows  
-- Category-based borrow analysis with **Chart.js**  
-- Due dates, late fees & borrow tracking  
+- Recent borrows section with:
+  - CSV Download  
+  - Pagination  
+- Category Analytics using **Chart.js**  
+- Late fee & due date management  
 
 ---
 
-## 🧠 **Smart Features**
-- Auto-check availability before borrowing  
-- Auto-calculate late fee when returning
-- OTP verifycation for password reset  
-- Flash message fade-out animation  
-- Clean UI built with **Tailwind CSS**  
-- Pagination added everywhere:
-  - Books list  
-  - Recent borrows  
-  - User borrowing history  
+## 🧠 Smart Features
+- Auto-check book availability  
+- 14-day due date  
+- Automatic late fee calculation  
+- OTP verification for password reset  
+- Flash messages fade automatically  
+- Tailwind-based UI  
+- Global pagination:
+  - Books page  
+  - Borrow history  
+  - Admin recent borrows  
 
 ---
 
-## 🧰 **Tech Stack**
+## 🧰 Tech Stack
 
 ### **Backend**
 - Python 3
 - Flask
-- Flask-Login (Authentication)
-- SQLAlchemy (ORM)
-- MySQL (Configurable)
+- Flask-Login
+- SQLAlchemy
+- MySQL (or SQLite)
 
 ### **Frontend**
-- HTML5
-- Tailwind CSS
-- Chart.js (Analytics)
-- Vanilla JavaScript
+- HTML5  
+- TailwindCSS  
+- JavaScript  
+- Chart.js  
 
 ---
 
 ## 📁 Folder Structure
 
+```
 library-hub/
 ├── app.py
 ├── models.py
 ├── .env 
 ├── requirements.txt
 ├── templates/
-│ ├── login.html
-│ ├── register.html
-│ ├── home.html
-│ ├── admin_dashboard.html
-│ ├── manage_books.html
-│ ├── edit_book.html
-│ ├── manage_users.html
-│ ├── user_history.html
-│ ├── books.html
-│ ├── verify_otp.html
-│ ├── reset_password.html
-│ ├── forgot_password.html
-│ └── change_password.html
+│   ├── login.html
+│   ├── register.html
+│   ├── home.html
+│   ├── admin_dashboard.html
+│   ├── manage_books.html
+│   ├── edit_book.html
+│   ├── manage_users.html
+│   ├── user_history.html
+│   ├── books.html
+│   ├── verify_otp.html
+│   ├── reset_password.html
+│   ├── forgot_password.html
+│   └── change_password.html
 └── static/
-  └── login.css
+    └── login.css
+```
+
+---
 
 ## 🔧 Installation & Setup
 
-### 1️⃣ **Clone the Repository**
-
+### 1️⃣ Clone the Repository
+```bash
 git clone https://github.com/your-username/library-resource-hub.git
 cd library-resource-hub
+```
 
 ### 2️⃣ Create Virtual Environment
-
+```bash
 python -m venv venv
-venv/Scripts/activate   # Windows
-source venv/bin/activate # Mac/Linux
 
+# Windows
+venv/Scripts/activate
+
+# Mac/Linux
+source venv/bin/activate
+```
 
 ### 3️⃣ Install Requirements
-
+```bash
 pip install -r requirements.txt
+```
 
 ### 4️⃣ Run Application
-
-$env:EMAIL_BACKEND = "console"
-
+```bash
+$env:EMAIL_BACKEND = "console"   # Only for Windows PowerShell
 python app.py
+```
 
-### Open the link
-
+### ✔ Open in Browser
+```
 http://127.0.0.1:5000
+```
+
+---
