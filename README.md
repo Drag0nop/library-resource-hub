@@ -104,6 +104,8 @@ pip install -r requirements.txt
 
 ### 4️⃣ Run Application
 
+$env:EMAIL_BACKEND = "console"
+
 python app.py
 
 ### Open the link
